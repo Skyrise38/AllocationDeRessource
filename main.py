@@ -1,2 +1,2 @@
-print(2);
-print(10);
+print(8);
+print(4);
