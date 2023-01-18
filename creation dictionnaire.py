@@ -20,5 +20,6 @@ def creation_dictionnaire(fichier_excel):
         eleves[i]["tab_choix"]=tab_choix
 
     print(eleves)
+    print(2)
 
 creation_dictionnaire("sujets choisis.xlsx")
