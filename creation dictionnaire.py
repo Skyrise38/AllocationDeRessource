@@ -12,7 +12,7 @@ def creation_dictionnaire(fichier_excel):
         tab_choix = []
         for j in range(2,nb_colonnes):
             if (str(feuille.cell(column=j, row=i).value)) not in tab_valeurs:
-                tab_choix.append("10")
+                tab_choix.append(10)
             else :
                 tab_choix.append(feuille.cell(column=j, row=i).value)
         eleves[i]={}
@@ -20,5 +20,6 @@ def creation_dictionnaire(fichier_excel):
         eleves[i]["tab_choix"]=tab_choix
 
     print(eleves)
+    return eleves
 
 creation_dictionnaire("sujets choisis.xlsx")
