@@ -5,8 +5,38 @@ import munkres
 from munkres import Munkres, print_matrix
 
 
-nb_personnes_par_projet=2
+nb_personnes_par_projet=3
 nb_projet=18
+nb_choix_projet=3
+
+#Fonction verif tableau
+def verifier_tableau(fichier_excel,nb_choix_projet):
+    wb = load_workbook(fichier_excel)
+    feuille = wb.active
+    nb_lignes = feuille.max_row
+    nb_colonnes = feuille.max_column
+    for i in range(2,nb_lignes):
+        somme=0
+        tab=[]
+        for j in range(2,nb_colonnes):
+            if feuille.cell(column=j, row=i).value!=None:
+                for caractere in str(feuille.cell(column=j, row=i).value):
+                    if caractere.isdigit()==False:
+                        return False
+                if int(feuille.cell(column=j, row=i).value)>nb_choix_projet:
+                    return False
+                somme+=int(feuille.cell(column=j, row=i).value)
+                tab.append(int(feuille.cell(column=j, row=i).value))
+        if somme!=nb_choix_projet*(nb_choix_projet+1)/2:
+            return False
+        if len(tab)!=nb_choix_projet:
+            return False
+        for k in range(1,nb_choix_projet+1):
+            if k not in tab:
+                return False
+    return True
+
+
 
 #Fonction création dictionnaire
 def creation_dictionnaire(fichier_excel,nb_personnes):
@@ -61,19 +91,22 @@ def creation_tableau_projet(nb_projet,nb_personnes):
 
 
 #Test
-dico = melange_dictionnaire(creation_dictionnaire("sujets choisis test.xlsx",nb_personnes_par_projet))
-matrice=creation_matrice(dico)
-tableau_projet=creation_tableau_projet(nb_projet, nb_personnes_par_projet)
-print(tableau_projet)
-m = Munkres()
 
-indexes = m.compute(matrice)
-print(dico)
-print(indexes)
-i=0
-for key in dico.keys():
-    dico[key]["Numéro projet"]=tableau_projet[indexes[i][1]]
-    dico[key]["Choix projet"]=matrice[indexes[i][0]][indexes[i][1]]
-    i=i+1
-    print("{} est assigné au projet {} et c'est son choix {}".format(dico[key]["Nom"],dico[key]["Numéro projet"],dico[key]["Choix projet"]))
-print ('val=', sum([matrice[k[0]][k[1]] for k in indexes])) 
+tableau_projet=creation_tableau_projet(nb_projet, nb_personnes_par_projet)
+if verifier_tableau("sujets choisis test.xlsx",nb_choix_projet):
+    print("Tableau valide")
+    dico = melange_dictionnaire(creation_dictionnaire("sujets choisis test.xlsx",nb_personnes_par_projet))
+    matrice=creation_matrice(dico)
+    m = Munkres()
+
+    indexes = m.compute(matrice)
+    print(indexes)
+    i=0
+    for key in dico.keys():
+        dico[key]["Numéro projet"]=tableau_projet[indexes[i][1]]
+        dico[key]["Choix projet"]=matrice[indexes[i][0]][indexes[i][1]]
+        i=i+1
+        print("{} est assigné au projet {} et c'est son choix {}".format(dico[key]["Nom"],dico[key]["Numéro projet"],dico[key]["Choix projet"]))
+    print ('val=', sum([matrice[k[0]][k[1]] for k in indexes])) 
+else :
+    print("Erreur, tableau invalide")   
