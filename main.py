@@ -73,6 +73,7 @@ print(indexes)
 i=0
 for key in dico.keys():
     dico[key]["Numéro projet"]=tableau_projet[indexes[i][1]]
+    dico[key]["Choix projet"]=matrice[indexes[i][0]][indexes[i][1]]
     i=i+1
-    print(dico[key]["Nom"])
-    print(dico[key]["Numéro projet"])
+    print("{} est assigné au projet {} et c'est son choix {}".format(dico[key]["Nom"],dico[key]["Numéro projet"],dico[key]["Choix projet"]))
+print ('val=', sum([matrice[k[0]][k[1]] for k in indexes])) 
