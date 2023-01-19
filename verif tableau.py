@@ -19,23 +19,24 @@ def verifier_tableau(fichier_excel,nb_choix_projet):
                 for caractere in str(feuille.cell(column=j, row=i).value):
                     if caractere.isdigit()==False:
                         print("Erreur, tableau invalide")
-                        return
+                        return False
                 if int(feuille.cell(column=j, row=i).value)>nb_choix_projet:
                     print("Erreur, tableau invalide")
-                    return
+                    return False
                 somme+=int(feuille.cell(column=j, row=i).value)
                 tab.append(int(feuille.cell(column=j, row=i).value))
         if somme!=nb_choix_projet*(nb_choix_projet+1)/2:
             print("Erreur, tableau invalide")
-            return
+            return False
         if len(tab)!=nb_choix_projet:
             print("Erreur, tableau invalide")
-            return
+            return False
         for k in range(1,nb_choix_projet+1):
             if k not in tab:
                 print("Erreur, tableau invalide")
-                return
+                return False
     print("Tableau valide")
-
+    return True
+    
 verifier_tableau("sujets choisis test.xlsx",nb_choix_projet)
 
