@@ -18,32 +18,50 @@ def verifier_tableau(fichier_excel,nb_choix_projet):
     feuille = wb.active
     nb_lignes = feuille.max_row
     nb_colonnes = feuille.max_column
+    flag=1
     for i in range(2,nb_lignes):
         somme=0
         tab=[]
         for j in range(2,nb_colonnes):
             if feuille.cell(column=j, row=i).value!=None:
+                flag_caractere=0
                 for caractere in str(feuille.cell(column=j, row=i).value):
                     if caractere.isdigit()==False:
                         print("Cellule {} invalide".format(feuille.cell(column=j, row=i).coordinate))
-                        return False
+                        if flag==1:
+                            flag=0
+                        if flag_caractere==0:
+                            flag_caractere=1
+                if flag_caractere==1:      
+                    break
                 if int(feuille.cell(column=j, row=i).value)>nb_choix_projet:
                     print("Cellule {} invalide".format(feuille.cell(column=j, row=i).coordinate))
-                    return False
+                    if flag==1:
+                        flag=0
                 somme+=int(feuille.cell(column=j, row=i).value)
                 tab.append(int(feuille.cell(column=j, row=i).value))
+        flag_choix=0
         if somme!=nb_choix_projet*(nb_choix_projet+1)/2:
             print("Ligne {} invalide : les choix doivent se situer entre {} et {} une seule fois".format(i,1,nb_choix_projet))
-            return False
+            if flag==1:
+                flag=0
+            if flag_choix==0:
+                flag_choix=1
         if len(tab)!=nb_choix_projet:
-            print("Ligne {} invalide : les choix doivent se situer entre {} et {} une seule fois".format(i,1,nb_choix_projet))
-            return False
+            if flag_choix==0:
+                print("Ligne {} invalide : les choix doivent se situer entre {} et {} une seule fois".format(i,1,nb_choix_projet))
+                if flag==1:
+                    flag=0
         for k in range(1,nb_choix_projet+1):
             if k not in tab:
                 print("Ligne {} invalide : le nombre de choix doit être de {}".format(i,nb_choix_projet))
-                return False
-    print("Tableau valide")
-    return True
+                if flag==1:
+                    flag=0
+    if flag==1:
+        print("Tableau valide")
+        return True
+    else :
+        return False
 
 
 
