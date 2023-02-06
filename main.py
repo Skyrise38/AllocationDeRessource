@@ -6,14 +6,18 @@ from munkres import Munkres, print_matrix
 from tkinter import * 
 from tkinter import messagebox
 import tkinter as tk
+import matplotlib.pyplot as plt
+import numpy as np
 
 
-nb_personnes_par_projet=3
-nb_projet=19
-nb_choix_projet=3
+nb_personnes_par_projet=1
+nb_projet=18
+nb_choix=3
+nb_eleves=36
+nb_test=1
 fichier_excel = "sujets choisis test.xlsx"
 
-
+    
 #Fonction fenetre graphique
 def creation_fenetre_graphique():
     fenetre_graphique=Tk()
@@ -22,7 +26,7 @@ def creation_fenetre_graphique():
     fenetre_graphique.rowconfigure(1, weight=1)
     fenetre_graphique.columnconfigure(0, weight=1)
     fenetre_graphique.columnconfigure(1, weight=1)
-    bouton_test=Button(fenetre_graphique, text="Test", command=main)
+    bouton_test=Button(fenetre_graphique, text="Test", command=test)
     bouton_test.grid(row=0, column=0)
     fenetre_graphique.mainloop()
 
@@ -55,24 +59,24 @@ def verifier_tableau(fichier_excel,nb_choix_projet):
                 somme+=int(feuille.cell(column=j, row=i).value)
                 tab.append(int(feuille.cell(column=j, row=i).value))
         flag_choix=0
-        if somme!=nb_choix_projet*(nb_choix_projet+1)/2:
-            print("Ligne {} invalide : les choix doivent se situer entre {} et {} une seule fois".format(i,1,nb_choix_projet))
-            if flag==1:
-                flag=0
-            if flag_choix==0:
-                flag_choix=1
+        #if somme!=nb_choix_projet*(nb_choix_projet+1)/2:
+            #print("Ligne {} invalide : les choix doivent se situer entre {} et {} une seule fois".format(i,1,nb_choix_projet))
+            #if flag==1:
+            #    flag=0
+            #if flag_choix==0:
+               # flag_choix=1
         if len(tab)!=nb_choix_projet:
             if flag_choix==0:
                 print("Ligne {} invalide : les choix doivent se situer entre {} et {} une seule fois".format(i,1,nb_choix_projet))
                 if flag==1:
                     flag=0
-        for k in range(1,nb_choix_projet+1):
-            if k not in tab:
-                print("Ligne {} invalide : le nombre de choix doit être de {}".format(i,nb_choix_projet))
-                if flag==1:
-                    flag=0
+        #for k in range(1,nb_choix_projet+1):
+            #if k not in tab:
+               # print("Ligne {} invalide : le nombre de choix doit être de {}".format(i,nb_choix_projet))
+               # if flag==1:
+                    #flag=0
     if flag==1:
-        print("Tableau valide")
+        #print("Tableau valide")
         return True
     else :
         return False
@@ -130,26 +134,80 @@ def creation_tableau_projet(nb_projet,nb_personnes):
     return tab
 
 
-
 #Test
 def main():
-    tableau_projet=creation_tableau_projet(nb_projet, nb_personnes_par_projet)
-    if verifier_tableau(fichier_excel,nb_choix_projet):
-        dico = melange_dictionnaire(creation_dictionnaire(fichier_excel,nb_personnes_par_projet))
-        matrice=creation_matrice(dico)
-        m = Munkres()
+    tab=[]
+    for i in range(100):
+        tableau_projet=creation_tableau_projet(nb_projet, nb_personnes_par_projet)
+        if verifier_tableau(fichier_excel,nb_choix_projet):
+            dico = melange_dictionnaire(creation_dictionnaire(fichier_excel,nb_personnes_par_projet))
+            matrice=creation_matrice(dico)
+            m = Munkres()
+            indexes = m.compute(matrice)
+            #print(indexes)
+            i=0
+            for key in dico.keys():
+                dico[key]["Numéro projet"]=tableau_projet[indexes[i][1]]
+                dico[key]["Choix projet"]=matrice[indexes[i][0]][indexes[i][1]]
+                i=i+1
+                #if dico[key]["Choix projet"]==10:
+                    #print("{} est assigné au projet {} et ce n'est pas son choix".format(dico[key]["Nom"],dico[key]["Numéro projet"]))
+                #else:
+                    #print("{} est assigné au projet {} et c'est son choix {}".format(dico[key]["Nom"],dico[key]["Numéro projet"],dico[key]["Choix projet"]))
+            #print ('val=', sum([matrice[k[0]][k[1]] for k in indexes])) 
+            tab.append(sum([matrice[k[0]][k[1]] for k in indexes]))
+    print(tab)
 
+
+def creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix):
+    matrice=[None]*nb_eleves
+
+    for i in range (nb_eleves):
+        nb_changement=0
+        matrice[i]=[None]*nb_projet*nb_personnes_par_projet
+        for j in range (nb_projet*nb_personnes_par_projet):
+            matrice[i][j]=10
+        while (nb_changement<nb_choix):
+            var=random.randint(0,nb_projet-1)
+            if (matrice [i][var*nb_personnes_par_projet]==10):
+                for k in range(nb_personnes_par_projet):
+                    matrice [i][var*nb_personnes_par_projet+k]=1
+                nb_changement+=1
+        
+    
+    return matrice
+
+
+
+
+
+def test():
+    for x in range(nb_test):
+        score = 0
+        matrice=creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix)
+        print(matrice)
+        m = Munkres()
         indexes = m.compute(matrice)
         print(indexes)
-        i=0
-        for key in dico.keys():
-            dico[key]["Numéro projet"]=tableau_projet[indexes[i][1]]
-            dico[key]["Choix projet"]=matrice[indexes[i][0]][indexes[i][1]]
-            i=i+1
-            if dico[key]["Choix projet"]==10:
-                print("{} est assigné au projet {} et ce n'est pas son choix".format(dico[key]["Nom"],dico[key]["Numéro projet"]))
-            else:
-                print("{} est assigné au projet {} et c'est son choix {}".format(dico[key]["Nom"],dico[key]["Numéro projet"],dico[key]["Choix projet"]))
-        print ('val=', sum([matrice[k[0]][k[1]] for k in indexes])) 
-    
+        for k in indexes:
+            if matrice[k[0]][k[1]]==1:
+                score+=matrice[k[0]][k[1]]
+    print(score)
+    pourcentage_reussite=score*100/nb_eleves
+    print(pourcentage_reussite)
+    creation_graphique_test(1,pourcentage_reussite)
+
+
+def creation_graphique_test(x,y):
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.bar(x,y)
+    #ax.set_xticklabels(xlabel)
+    #ax.set_xlabel('Tests')
+    #ax.set_ylabel('Score')
+    #ax.set_title('Résultats des tests aléatoires pour {} élèves, {} projets et {} choix par élève'.format(nb_eleves,nb_projet,nb_choix))
+    plt.show()
+
+
+
 creation_fenetre_graphique()
