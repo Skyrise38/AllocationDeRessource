@@ -179,7 +179,7 @@ def creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix,nb_personnes_par_pro
 
 
 tab_color=["red","blue"]
-tab_label=["% Réussites matrice","% Réussite élève"]
+tab_label=["% Réussite matrice","% Réussite élève"]
 
 #ORDRE : nb_eleves/nb_projet/nb_personnes_par_projet/nb_choix/nb_test
 # 50/18/3/3
@@ -187,8 +187,9 @@ tab_label=["% Réussites matrice","% Réussite élève"]
 #Fonction bouton test
 def test():
     #test_nb_personnes_par_projet("Nombre de personnes par projet",1,4,1,36,20,3,10,tab_label)
-    test_nb_choix("Nombre de choix par élève",1,4,1,50,18,3,10,tab_label)
-    test_nb_eleves("Nombre d'élèves",30,50,5,18,3,3,10,tab_label)
+    #test_nb_choix("Nombre de choix par élève",1,4,1,50,18,3,10,tab_label)
+    #test_nb_eleves("Nombre d'élèves",180,190,2,18,3,3,10,tab_label)
+    test_nb_projet("Nombre de projets",5,10,1,36,3,3,10,tab_label)
 
 
 #Fonction verification test
@@ -296,8 +297,8 @@ def test_nb_personnes_par_projet(nom_variable,borne_inf,borne_supp,pas,nb_eleves
 
 
 
-#Fonction test nombre d'élèves'
-def test_nb_eleves(nom_variable,borne_inf,borne_supp,pas,nb_personnes_par_projet,nb_projet,nb_choix,nb_test,tab_label):
+#Fonction test nombre d'élèves
+def test_nb_eleves(nom_variable,borne_inf,borne_supp,pas,nb_projet,nb_personnes_par_projet,nb_choix,nb_test,tab_label):
     if verif_test(borne_inf,borne_supp,pas)==0:
         return
     tab_x,tab_xlabel,tab_y_reussite_matrice,tab_y_reussite_eleves=prepa_test(borne_inf,borne_supp,pas)
@@ -323,6 +324,33 @@ def test_nb_eleves(nom_variable,borne_inf,borne_supp,pas,nb_personnes_par_projet
         borne_inf+=pas
     creation_graphique_test_nb_eleves(nom_variable,tab_x,tab_y_reussite_matrice,tab_y_reussite_eleves,tab_xlabel,tab_color,nb_personnes_par_projet,nb_projet,nb_choix,tab_label)
 
+#Fonction test nombre de projet
+def test_nb_projet(nom_variable,borne_inf,borne_supp,pas,nb_eleves,nb_personnes_par_projet,nb_choix,nb_test,tab_label):
+    if verif_test(borne_inf,borne_supp,pas)==0:
+        return
+    tab_x,tab_xlabel,tab_y_reussite_matrice,tab_y_reussite_eleves=prepa_test(borne_inf,borne_supp,pas)
+    while borne_inf<=borne_supp:
+        tab_xlabel.append(borne_inf)
+        score_matrice=0
+        somme=0
+        for x in range(0,nb_test):
+            score = 0
+            matrice=creation_matrice_aleatoire(nb_eleves,borne_inf,nb_choix,nb_personnes_par_projet)
+            m = Munkres()
+            indexes = m.compute(matrice)
+            for k in indexes:
+                if matrice[k[0]][k[1]]==1:
+                    score+=1
+            somme+=score
+            if score==borne_inf:
+                score_matrice+=1
+        pourcentage_reussite_eleves=somme*100/(nb_test*nb_eleves)
+        tab_y_reussite_eleves.append(pourcentage_reussite_eleves)
+        pourcentage_reussite_matrice=score_matrice*100/nb_test
+        tab_y_reussite_matrice.append(pourcentage_reussite_matrice)
+        borne_inf+=pas
+    creation_graphique_test_nb_projet(nom_variable,tab_x,tab_y_reussite_matrice,tab_y_reussite_eleves,tab_xlabel,tab_color,nb_personnes_par_projet,nb_eleves,nb_choix,tab_label)
+
 #Graphique test nombre de personnes par projet
 def creation_graphique_test_nb_personnes_par_projet(nom_variable,x,y1,y2,xlabel,tab_color,nb_eleves,nb_projet,nb_choix,tab_label):
     ax = creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label)
@@ -336,9 +364,15 @@ def creation_graphique_test_nb_choix(nom_variable,x,y1,y2,xlabel,tab_color,nb_el
     plt.show()
 
 #Graphique test nombre d'élèves
-def creation_graphique_test_nb_eleves(nom_variable,x,y1,y2,xlabel,tab_color,nb_eleves,nb_projet,nb_personnes_par_projet,tab_label):
+def creation_graphique_test_nb_eleves(nom_variable,x,y1,y2,xlabel,tab_color,nb_personnes_par_projet,nb_projet,nb_choix,tab_label):
     ax = creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label)
-    ax.set_title("Test du nombre d'élèves avec {} élèves, {} projets et {} élèves par projet".format(nb_eleves,nb_projet,nb_personnes_par_projet),fontsize=12)
+    ax.set_title("Test du nombre d'élèves avec {} projets, {} élèves par projet et {} choix par élève".format(nb_projet,nb_personnes_par_projet,nb_choix),fontsize=12)
+    plt.show()
+
+#Graphique test nombre d'élèves
+def creation_graphique_test_nb_projet(nom_variable,x,y1,y2,xlabel,tab_color,nb_personnes_par_projet,nb_eleves,nb_choix,tab_label):
+    ax = creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label)
+    ax.set_title("Test du nombre de projet avec {} élèves, {} élèves par projet et {} choix par élève".format(nb_eleves,nb_personnes_par_projet,nb_choix),fontsize=12)
     plt.show()
 
 
