@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-nb_personnes_par_projet=1
-nb_projet=18
-nb_choix=3
-nb_eleves=36
-nb_test=1
+#nb_personnes_par_projet=2
+#nb_projet=18
+#nb_choix=3
+#nb_eleves=36
+#nb_test=10
 fichier_excel = "sujets choisis test.xlsx"
 
     
@@ -159,7 +159,7 @@ def main():
     print(tab)
 
 
-def creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix):
+def creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix,nb_personnes_par_projet):
     matrice=[None]*nb_eleves
 
     for i in range (nb_eleves):
@@ -178,34 +178,167 @@ def creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix):
     return matrice
 
 
+tab_color=["red","blue"]
+tab_label=["% Réussites matrice","% Réussite élève"]
 
+#ORDRE : nb_eleves/nb_projet/nb_personnes_par_projet/nb_choix/nb_test
+# 50/18/3/3
 
-
+#Fonction bouton test
 def test():
-    for x in range(nb_test):
-        score = 0
-        matrice=creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix)
-        print(matrice)
-        m = Munkres()
-        indexes = m.compute(matrice)
-        print(indexes)
-        for k in indexes:
-            if matrice[k[0]][k[1]]==1:
-                score+=matrice[k[0]][k[1]]
-    print(score)
-    pourcentage_reussite=score*100/nb_eleves
-    print(pourcentage_reussite)
-    creation_graphique_test(1,pourcentage_reussite)
+    #test_nb_personnes_par_projet("Nombre de personnes par projet",1,4,1,36,20,3,10,tab_label)
+    test_nb_choix("Nombre de choix par élève",1,4,1,50,18,3,10,tab_label)
+    test_nb_eleves("Nombre d'élèves",30,50,5,18,3,3,10,tab_label)
 
 
-def creation_graphique_test(x,y):
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.bar(x,y)
-    #ax.set_xticklabels(xlabel)
-    #ax.set_xlabel('Tests')
-    #ax.set_ylabel('Score')
-    #ax.set_title('Résultats des tests aléatoires pour {} élèves, {} projets et {} choix par élève'.format(nb_eleves,nb_projet,nb_choix))
+#Fonction verification test
+def verif_test(borne_inf,borne_supp,pas):
+    if borne_inf>borne_supp:
+        return 0
+    if pas<=0:
+        return 0
+    return 1
+
+#Fonction préparation test
+def prepa_test(borne_inf,borne_supp,pas):
+    borne_inf_copie=borne_inf
+    tab_x=[]
+    tab_xlabel=[]
+    tab_y_reussite_matrice=[]
+    tab_y_reussite_eleves=[]
+    i=1
+    while borne_inf_copie<=borne_supp:
+        tab_x.append(i)
+        i+=1
+        borne_inf_copie+=pas
+    return tab_x,tab_xlabel,tab_y_reussite_matrice,tab_y_reussite_eleves
+
+#Fonction création graphique
+def creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label):
+    y=[y1,y2]
+    width = 0.2
+    x_float=[]
+    x_float2=[]
+    xticks=[]
+    tab_x=[]
+    fig, ax = plt.subplots()
+    fig.set_figwidth(8)
+    for k in range(len(x)):
+        xticks.append(x[k]+width/2)
+        x_float.append(float(x[k]))
+        x_float2.append(float(x[k])+width)
+    tab_x.append(x_float)
+    tab_x.append(x_float2)
+    for i in range(2):
+        bar = ax.bar(tab_x[i], y[i], width,color=tab_color[i],label=tab_label[i])
+        ax.bar_label(bar, padding=1,fmt="%d")
+    ax.set_xticks(xticks,xlabel)
+    ax.legend(loc='upper left', bbox_to_anchor=(0, 0),edgecolor="white")
+    ax.set_xlabel("{}".format(nom_variable))
+    ax.set_ylabel('Taux de réussite (%)')
+    fig.tight_layout()
+    return ax
+
+#Fonction test nombre de choix des élèves
+def test_nb_choix(nom_variable,borne_inf,borne_supp,pas,nb_eleves,nb_projet,nb_personnes_par_projet,nb_test,tab_label):
+    if verif_test(borne_inf,borne_supp,pas)==0:
+        return
+    tab_x,tab_xlabel,tab_y_reussite_matrice,tab_y_reussite_eleves=prepa_test(borne_inf,borne_supp,pas)
+    while borne_inf<=borne_supp:
+        tab_xlabel.append(borne_inf)
+        score_matrice=0
+        somme=0
+        for x in range(0,nb_test):
+            score = 0
+            matrice=creation_matrice_aleatoire(nb_eleves,nb_projet,borne_inf,nb_personnes_par_projet)
+            m = Munkres()
+            indexes = m.compute(matrice)
+            for k in indexes:
+                if matrice[k[0]][k[1]]==1:
+                    score+=1
+            somme+=score
+            if score==nb_eleves:
+                score_matrice+=1
+        pourcentage_reussite_eleves=somme*100/(nb_test*nb_eleves)
+        tab_y_reussite_eleves.append(pourcentage_reussite_eleves)
+        pourcentage_reussite_matrice=score_matrice*100/nb_test
+        tab_y_reussite_matrice.append(pourcentage_reussite_matrice)
+        borne_inf+=pas
+    creation_graphique_test_nb_choix(nom_variable,tab_x,tab_y_reussite_matrice,tab_y_reussite_eleves,tab_xlabel,tab_color,nb_eleves,nb_projet,nb_personnes_par_projet,tab_label)
+
+
+#Fonction test nombre de personnes par projet
+def test_nb_personnes_par_projet(nom_variable,borne_inf,borne_supp,pas,nb_eleves,nb_projet,nb_choix,nb_test,tab_label):
+    if verif_test(borne_inf,borne_supp,pas)==0:
+        return
+    tab_x,tab_xlabel,tab_y_reussite_matrice,tab_y_reussite_eleves=prepa_test(borne_inf,borne_supp,pas)
+    while borne_inf<=borne_supp:
+        tab_xlabel.append(borne_inf)
+        score_matrice=0
+        somme=0
+        for x in range(0,nb_test):
+            score = 0
+            matrice=creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix,borne_inf)
+            m = Munkres()
+            indexes = m.compute(matrice)
+            for k in indexes:
+                if matrice[k[0]][k[1]]==1:
+                    score+=1
+            somme+=score
+            if score==nb_eleves:
+                score_matrice+=1
+        pourcentage_reussite_eleves=somme*100/(nb_test*nb_eleves)
+        tab_y_reussite_eleves.append(pourcentage_reussite_eleves)
+        pourcentage_reussite_matrice=score_matrice*100/nb_test
+        tab_y_reussite_matrice.append(pourcentage_reussite_matrice)
+        borne_inf+=pas
+    creation_graphique_test_nb_personnes_par_projet(nom_variable,tab_x,tab_y_reussite_matrice,tab_y_reussite_eleves,tab_xlabel,tab_color,nb_eleves,nb_projet,nb_choix,tab_label)
+
+
+
+#Fonction test nombre d'élèves'
+def test_nb_eleves(nom_variable,borne_inf,borne_supp,pas,nb_personnes_par_projet,nb_projet,nb_choix,nb_test,tab_label):
+    if verif_test(borne_inf,borne_supp,pas)==0:
+        return
+    tab_x,tab_xlabel,tab_y_reussite_matrice,tab_y_reussite_eleves=prepa_test(borne_inf,borne_supp,pas)
+    while borne_inf<=borne_supp:
+        tab_xlabel.append(borne_inf)
+        score_matrice=0
+        somme=0
+        for x in range(0,nb_test):
+            score = 0
+            matrice=creation_matrice_aleatoire(borne_inf,nb_projet,nb_choix,nb_personnes_par_projet)
+            m = Munkres()
+            indexes = m.compute(matrice)
+            for k in indexes:
+                if matrice[k[0]][k[1]]==1:
+                    score+=1
+            somme+=score
+            if score==borne_inf:
+                score_matrice+=1
+        pourcentage_reussite_eleves=somme*100/(nb_test*borne_inf)
+        tab_y_reussite_eleves.append(pourcentage_reussite_eleves)
+        pourcentage_reussite_matrice=score_matrice*100/nb_test
+        tab_y_reussite_matrice.append(pourcentage_reussite_matrice)
+        borne_inf+=pas
+    creation_graphique_test_nb_eleves(nom_variable,tab_x,tab_y_reussite_matrice,tab_y_reussite_eleves,tab_xlabel,tab_color,nb_personnes_par_projet,nb_projet,nb_choix,tab_label)
+
+#Graphique test nombre de personnes par projet
+def creation_graphique_test_nb_personnes_par_projet(nom_variable,x,y1,y2,xlabel,tab_color,nb_eleves,nb_projet,nb_choix,tab_label):
+    ax = creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label)
+    ax.set_title("Test du nombre d'élèves par projet avec {} élèves, {} projets et {} choix par élève".format(nb_eleves,nb_projet,nb_choix),fontsize=12)
+    plt.show()
+
+#Graphique test nombre de choix par élèves
+def creation_graphique_test_nb_choix(nom_variable,x,y1,y2,xlabel,tab_color,nb_eleves,nb_projet,nb_personnes_par_projet,tab_label):
+    ax = creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label)
+    ax.set_title('Test du nombre de choix par élèves avec {} élèves, {} projets et {} élèves par projet'.format(nb_eleves,nb_projet,nb_personnes_par_projet),fontsize=12)
+    plt.show()
+
+#Graphique test nombre d'élèves
+def creation_graphique_test_nb_eleves(nom_variable,x,y1,y2,xlabel,tab_color,nb_eleves,nb_projet,nb_personnes_par_projet,tab_label):
+    ax = creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label)
+    ax.set_title("Test du nombre d'élèves avec {} élèves, {} projets et {} élèves par projet".format(nb_eleves,nb_projet,nb_personnes_par_projet),fontsize=12)
     plt.show()
 
 
