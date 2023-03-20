@@ -1,17 +1,16 @@
-
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Mar  9 13:47:54 2023
+Created on Mon Mar 20 14:19:59 2023
 
-@author: Lombard
+@author: lorislombard
 """
-
 
 import pandas as pd
 import gurobipy as gp
 import numpy as np
 from gurobipy import GRB
-import creation_tab as fct
+
 
 
 MAX_STUDENTS_PER_PROJECT = 4
@@ -111,33 +110,31 @@ def get_results(assign):
 ######################################    MAIN    #######################################################################
 
 
-###### Test pour nb choix allant de 1 à 10
 
-nb_eleves=40
-nb_projets=15
-nb_matrice_alea=100
 
-for i in range(1,10):
-    nb_choix =i
-    tab_res=[]
+nb_matrice_alea=1
+
+
+
+tab_res=[]
     
-    fct.creation_excel(nb_eleves, nb_projets, nb_choix)
+
+#########     Chargement des données   ############
     
-    #########     Chargement des données   ############
+Xdf = pd.read_excel("attribution sujets.xlsx")
+Xdf=Xdf.replace(r'^\s*$',10,regex=True) #si tableau vide avec des 1
+Xdf=Xdf.replace(0,10,regex=True)
+Xdf = Xdf.fillna(10)
+Xdf.index=Xdf["N° projet"].tolist()
     
-    Xdf = pd.read_excel("choix_projets.xlsx")
-    # Xdf=Xdf.replace(r'^\s*$',10,regex=True) si tableau vide avec des 1
-    Xdf=Xdf.replace(0,10,regex=True)
-    Xdf = Xdf.fillna(10)
-    Xdf.index=Xdf["N° projet"].tolist()
+students = Xdf["N° projet"].tolist()
+Xdf=Xdf.drop("N° projet", axis=1)
     
-    students = Xdf["N° projet"].tolist()
-    Xdf=Xdf.drop("N° projet", axis=1)
+i=0;
+nb_succes=0;
     
-    i=0;
-    nb_succes=0;
-    
-    while (i<nb_matrice_alea):
+while (i<nb_matrice_alea):
+        
         i+=1;
         #########     Mélange des lignes du dataframe         ############
         
@@ -151,7 +148,7 @@ for i in range(1,10):
         
         #########     Changement des choix des élèves         ############
         
-        Xdf = Xdf.apply(np.random.permutation)
+        #Xdf = Xdf.apply(np.random.permutation)
         
         #########     Nombre de projets et d'élèves         ############
         
@@ -192,210 +189,15 @@ for i in range(1,10):
         #ratings.sum("*", "Project 00")
         #ratings.sum("*", "Project 01")
         
-        m, assign = solve(max_projects=15)
+        m, assign = solve(max_projects=20)
         assign_df, n_ranks, group_sizes = get_results(assign)
        
         if (n_ranks[0]==len(students)):
-            nb_succes+=1;
+            print("Tous les élèves ont leur premier choix")
+        
+        assign_df.to_excel('Resultats.xlsx')
             
-    tab_res.append(nb_succes/nb_matrice_alea)
 
 
 
 
-###### Test pour nb eleves allant de 20 à 60
-
-nb_choix=3
-nb_projets=15
-nb_matrice_alea=100
-
-for i in range(20,60,5):
-    nb_eleves =i
-    tab_res=[]
-    
-    fct.creation_excel(nb_eleves, nb_projets, nb_choix)
-    
-    #########     Chargement des données   ############
-    
-    Xdf = pd.read_excel("choix_projets.xlsx")
-    # Xdf=Xdf.replace(r'^\s*$',10,regex=True) si tableau vide avec des 1
-    Xdf=Xdf.replace(0,10,regex=True)
-    Xdf = Xdf.fillna(10)
-    Xdf.index=Xdf["N° projet"].tolist()
-    
-    students = Xdf["N° projet"].tolist()
-    Xdf=Xdf.drop("N° projet", axis=1)
-    
-    i=0;
-    nb_succes=0;
-    
-    while (i<nb_matrice_alea):
-        i+=1;
-        #########     Mélange des lignes du dataframe         ############
-        
-        #Xdf=Xdf.sample(frac=1)
-        
-        
-        #########     Mélange de l'ordre des colonnes du DF   ############
-        
-        #Xdf = Xdf.sample(frac=1, axis=1)
-        
-        
-        #########     Changement des choix des élèves         ############
-        
-        Xdf = Xdf.apply(np.random.permutation)
-        
-        #########     Nombre de projets et d'élèves         ############
-        
-        #I = Xdf.shape[0] # Nombre d'élèves
-        #J = Xdf.shape[1] # Nombre de projets
-        
-        #########     Création du tableau avec le numéro des projets         ############
-    
-        projects = Xdf.columns.tolist()
-        
-        
-        
-        rank_df =Xdf
-        
-        #########     Liste des élèves ensemble        ############
-        
-        # Example : together = [("Student 01", "Student 13"), ("Student 05", "Student 06")]
-        
-        together = [
-        
-        ]
-        
-        #########     Liste des élèves à séparer        ############
-        
-        apart = [
-        
-        ]
-        
-        permutations, ratings = gp.multidict({
-            (i, j): rank_df.loc[i, j]
-            for i in students
-            for j in projects
-        })
-        
-        #permutations[:40]
-        
-        
-        #ratings.sum("*", "Project 00")
-        #ratings.sum("*", "Project 01")
-        
-        m, assign = solve(max_projects=15)
-        assign_df, n_ranks, group_sizes = get_results(assign)
-       
-        if (n_ranks[0]==len(students)):
-            nb_succes+=1;
-            
-    tab_res.append(nb_succes/nb_matrice_alea)
-
-
-###### Test pour nb projets allant de 10 à 30
-
-nb_choix=3
-nb_eleves=40
-nb_matrice_alea=100
-
-for i in range(10,30,2):
-    nb_projets =i
-    tab_res=[]
-    
-    fct.creation_excel(nb_eleves, nb_projets, nb_choix)
-    
-    #########     Chargement des données   ############
-    
-    Xdf = pd.read_excel("choix_projets.xlsx")
-    # Xdf=Xdf.replace(r'^\s*$',10,regex=True) si tableau vide avec des 1
-    Xdf=Xdf.replace(0,10,regex=True)
-    Xdf = Xdf.fillna(10)
-    Xdf.index=Xdf["N° projet"].tolist()
-    
-    students = Xdf["N° projet"].tolist()
-    Xdf=Xdf.drop("N° projet", axis=1)
-    
-    i=0;
-    nb_succes=0;
-    
-    while (i<nb_matrice_alea):
-        i+=1;
-        #########     Mélange des lignes du dataframe         ############
-        
-        #Xdf=Xdf.sample(frac=1)
-        
-        
-        #########     Mélange de l'ordre des colonnes du DF   ############
-        
-        #Xdf = Xdf.sample(frac=1, axis=1)
-        
-        
-        #########     Changement des choix des élèves         ############
-        
-        Xdf = Xdf.apply(np.random.permutation)
-        
-        #########     Nombre de projets et d'élèves         ############
-        
-        #I = Xdf.shape[0] # Nombre d'élèves
-        #J = Xdf.shape[1] # Nombre de projets
-        
-        #########     Création du tableau avec le numéro des projets         ############
-    
-        projects = Xdf.columns.tolist()
-        
-        
-        
-        rank_df =Xdf
-        
-        #########     Liste des élèves ensemble        ############
-        
-        # Example : together = [("Student 01", "Student 13"), ("Student 05", "Student 06")]
-        
-        together = [
-        
-        ]
-        
-        #########     Liste des élèves à séparer        ############
-        
-        apart = [
-        
-        ]
-        
-        permutations, ratings = gp.multidict({
-            (i, j): rank_df.loc[i, j]
-            for i in students
-            for j in projects
-        })
-        
-        #permutations[:40]
-        
-        
-        #ratings.sum("*", "Project 00")
-        #ratings.sum("*", "Project 01")
-        
-        m, assign = solve(max_projects=15)
-        assign_df, n_ranks, group_sizes = get_results(assign)
-       
-        if (n_ranks[0]==len(students)):
-            nb_succes+=1;
-            
-    tab_res.append(nb_succes/nb_matrice_alea)
-
-
-
-'''
-# Générer un fichier Excel à partir du dataframe
-assign_df.to_excel('result.xlsx', index=1)
-assign_df
-n_ranks
-group_sizes
-'''
-
-
-
-# Affichage des résultats
-'''for eleve in assign_df.index:
-    projet = assign_df.loc[eleve][assign_df.loc[eleve] == 1].index[0]
-    print(f"{eleve} est assigné au {projet}")
-'''
