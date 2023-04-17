@@ -658,10 +658,10 @@ def fenetre_principale():
     nom_excel = StringVar()
     nom_excel.set("")
     
-    titre = Label(fenetre_accueil, bg="white", text="Affectation de projets", font=("Courier",20,"italic"))
+    titre = Label(fenetre_accueil, bg="white",fg="black", text="Affectation de projets", font=("Courier",20,"italic"))
     titre.grid(column=0, columnspan=4, row=0)
     
-    label_choix = Label(fenetre_accueil, bg="white", text="Choix de l'algorithme :", font=("Courier",15,"italic"))
+    label_choix = Label(fenetre_accueil, bg="white",fg="black", text="Choix de l'algorithme :", font=("Courier",15,"italic"))
     label_choix.grid(column=0, row=1)
     
     global bouton_munkres
@@ -685,11 +685,11 @@ def fenetre_principale():
     bouton_charger_excel.grid(column=0,columnspan=4, row=2)
     
     global label_fichier
-    label_fichier = Label(fenetre_accueil,bg="white", text="Fichier chargé :",font=("Courier", 12,"italic"))
+    label_fichier = Label(fenetre_accueil,bg="white",fg="black", text="Fichier chargé :",font=("Courier", 12,"italic"))
     label_fichier.grid(column=0, row=3)
     
     global path_label
-    path_label= Label(fenetre_accueil,bg="white", text=fichier_path.get(),font=("Courier", 12,"italic"))
+    path_label= Label(fenetre_accueil,bg="white",fg="black", text=fichier_path.get(),font=("Courier", 12,"italic"))
     path_label.grid(column=1,columnspan=3, row=3)
     
     global bouton_generer
@@ -709,20 +709,20 @@ def fenetre_principale():
     bouton_decrement_solution.grid(column=3, row=4)
     
     global label_nombre_solutions
-    label_nombre_solutions = Label(fenetre_accueil, bg="white", text="Nombre de solutions : ",font=("Courier", 12,"italic"))
+    label_nombre_solutions = Label(fenetre_accueil, bg="white",fg="black", text="Nombre de solutions : ",font=("Courier", 12,"italic"))
     label_nombre_solutions.grid(column=1, row=5)
     global zone_de_texte
     zone_de_texte = Entry(fenetre_accueil,bg="light green",justify="center",textvariable=numero_solution,text="")
     zone_de_texte.grid(column=2,row=5)
     global label_nb_solutions
-    label_nb_solutions = Label(fenetre_accueil,bg="white",text="/  0")
+    label_nb_solutions = Label(fenetre_accueil,bg="white",fg="black",text="/  0")
     label_nb_solutions.grid(column=3, row=5,sticky=W)
     global progression_algo
     progression_algo = Progressbar(fenetre_accueil,orient='horizontal',length=300,mode='determinate',value=0)
     progression_algo.grid(column=0, row=5)
     
     global label_nom_excel
-    label_nom_excel = Label(fenetre_accueil, bg="white", text="Nom du Excel : ",font=("Courier", 12,"italic"))
+    label_nom_excel = Label(fenetre_accueil, bg="white",fg="black", text="Nom du Excel : ",font=("Courier", 12,"italic"))
     label_nom_excel.grid(column=0, row=6,sticky=E)
     
     global zone_nom_excel
@@ -832,7 +832,7 @@ def fenetre_contraintes():
     bouton_contrainte = Button(fenetre_contrainte,width=20, bg="white", activebackground="white", text="Valider contrainte", font=("Courier",12,"italic"), command=valider_contrainte)
     bouton_contrainte.grid(column=5, row=0)
     
-    titre = Label(fenetre_contrainte, text="Liste des contraintes",bg="white",font=("Courier",18,"italic"))
+    titre = Label(fenetre_contrainte, text="Liste des contraintes",bg="white",fg="black",font=("Courier",18,"italic"))
     titre.grid(column=0, columnspan=6, row=1)
     
     maj_liste_contrainte()
@@ -979,12 +979,6 @@ def fenetre_munkres(nb_eleves):
     
     fenetre_principale()
     
-         
-    
-#%% 
-
-fenetre_munkres(nb_eleves)
-#%% 
  
     
 def creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix,nb_personnes_par_projet):
@@ -1197,3 +1191,10 @@ def creation_graphique_test_nb_projet(nom_variable,x,y1,y2,xlabel,tab_color,nb_p
     ax = creation_graphique(nom_variable,x,y1,y2,xlabel,tab_color,tab_label)
     ax.set_title("Test du nombre de projet avec {} élèves, {} élèves par projet et {} choix par élève".format(nb_eleves,nb_personnes_par_projet,nb_choix),fontsize=12)
     plt.show()
+
+
+
+#%% 
+
+fenetre_munkres(nb_eleves)
+
