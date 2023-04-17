@@ -477,11 +477,11 @@ def choix_algo_guroby():
    bouton_munkres.config(bg="white",activebackground="white")
    var_algo.set(1)
    global bouton_contrainte
-   bouton_contrainte=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Contrainte", font=('Courier', 11,'italic'),command=fenetre_contraintes)
+   bouton_contrainte=Button(fenetre_accueil,bg="white",fg="black" ,activebackground="white",text="Contrainte", font=('Courier', 11,'italic'),command=fenetre_contraintes)
    bouton_contrainte.grid(column=0, columnspan=4,row=5)
    
    global label_max_projets
-   label_max_projets = Label(fenetre_accueil,bg="white", text="Nombre max de projets",font=("Courier", 12,"italic"))
+   label_max_projets = Label(fenetre_accueil,bg="white",fg="black", text="Nombre max de projets",font=("Courier", 12,"italic"))
    label_max_projets.grid(column=0, row=2)
 
    global nb_max_projets
@@ -493,10 +493,10 @@ def choix_algo_guroby():
    bouton_charger_excel=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Charger excel", font=('Courier', 11,'italic'),command=charger_fichier)
    bouton_charger_excel.grid(column=0,columnspan=4, row=3)
    
-   label_fichier = Label(fenetre_accueil,bg="white", text="Fichier chargé :",font=("Courier", 12,"italic"))
+   label_fichier = Label(fenetre_accueil,bg="white",fg="black", text="Fichier chargé :",font=("Courier", 12,"italic"))
    label_fichier.grid(column=0, row=4)
    
-   path_label= Label(fenetre_accueil,bg="white", text=fichier_path.get(),font=("Courier", 12,"italic"))
+   path_label= Label(fenetre_accueil,bg="white",fg="black", text=fichier_path.get(),font=("Courier", 12,"italic"))
    path_label.grid(column=1,columnspan=3, row=4)
    
    bouton_generer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Generer solution", font=('Courier', 11,'italic'),command=combinaisons_algo)
@@ -505,7 +505,7 @@ def choix_algo_guroby():
    bouton_afficher=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=lambda:affichage_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
    bouton_afficher.grid(column=2, row=6)
    
-   label_nom_excel = Label(fenetre_accueil, bg="white", text="Nom du Excel :",font=("Courier", 12,"italic"))
+   label_nom_excel = Label(fenetre_accueil, bg="white",fg="black", text="Nom du Excel :",font=("Courier", 12,"italic"))
    label_nom_excel.grid(column=0, row=7,sticky=E)
    
    zone_nom_excel = Entry(fenetre_accueil,bg="light green",justify="center",textvariable=nom_excel,text="")
@@ -591,7 +591,7 @@ def affichage_resultat(index,dataframe):
      tableau_frame = Frame(fenetre_resultat)
      tableau_frame.grid(column=0, row=1)
      
-     titre = Label(fenetre_resultat, bg="white", text="Résultat", font=("Courier",25, "italic", "underline"))
+     titre = Label(fenetre_resultat, bg="white",fg="black", text="Résultat", font=("Courier",25, "italic", "underline"))
      titre.grid(row=0, column=0)
      
      scrollbar = Scrollbar(tableau_frame)
