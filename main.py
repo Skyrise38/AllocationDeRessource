@@ -245,6 +245,102 @@ def Resultats(path):
     df_res.to_excel("Resultats.xlsx")
     
 #%%
+def get_results_melange(assign):
+        """ Take the dict of results and turn it into useful DataFrames """
+        
+        # create df with impossible placeholder
+        assign_df = pd.DataFrame(-1, index=students, columns=projects)
+
+        # fill in the decision variable results
+        for (i, j), x_ij in assign.items():
+            assign_df.loc[i, j] = int(x_ij.X)
+
+        # sanity check that none were missed
+        assert ((assign_df == 0) | (assign_df == 1)).all().all()
+        
+        # count how many students got their nth choice
+        choices = (assign_df * rank_df).values.ravel()
+        choices = choices[choices > 0]
+        n_ranks = pd.Series(choices).value_counts().rename(index=lambda x: f"choice {x}")
+
+        # count up how big the group sizes are
+        group_sizes = assign_df.sum(axis="rows").sort_values(ascending=False).rename("n").sort_values(ascending=False)
+        
+        return assign_df, n_ranks, group_sizes
+    
+    #########     Chargement des données   ############        
+    Xdf = pd.read_excel(path)
+    Xdf=Xdf.replace(r'^\s*$',10,regex=True) #si tableau vide avec des 1
+    Xdf=Xdf.replace(0,10,regex=True)
+    Xdf = Xdf.fillna(10)
+    Xdf.index=Xdf["N° projet"].tolist()
+        
+    students = Xdf["N° projet"].tolist()
+    Xdf=Xdf.drop("N° projet", axis=1)
+
+
+    #########     Mélange des lignes du dataframe         ############
+            
+    Xdf=Xdf.sample(frac=1)
+            
+            
+    #########     Mélange de l'ordre des colonnes du DF   ############
+            
+    Xdf = Xdf.sample(frac=1, axis=1)
+            
+            
+    #########     Changement des choix des élèves         ############
+            
+    #Xdf = Xdf.apply(np.random.permutation)
+            
+    #########     Nombre de projets et d'élèves         ############
+            
+    #I = Xdf.shape[0] # Nombre d'élèves
+    #J = Xdf.shape[1] # Nombre de projets
+            
+    #########     Création du tableau avec le numéro des projets         ############
+        
+    projects = Xdf.columns.tolist()
+    rank_df =Xdf
+            
+    #########     Liste des élèves ensemble        ############
+            
+    # Example : together = [("Student 01", "Student 13"), ("Student 05", "Student 06")]
+            
+    together = [
+            
+    ]
+            
+    #########     Liste des élèves à séparer        ############
+            
+    apart = [
+            
+    ]
+            
+    permutations, ratings = gp.multidict({
+        (i, j): rank_df.loc[i, j]
+        for i in students
+        for j in projects
+        })
+            
+            
+    m, assign = solve(max_projects=20)
+    assign_df, n_ranks, group_sizes = get_results(assign)
+           
+    if (n_ranks[0]==len(students)):
+        print("Tous les élèves ont leur premier choix")
+            
+    #assign_df.to_excel('Resultats.xlsx')
+    
+    col = []
+    index_df = assign_df.index.tolist()
+    
+    for i in range (len(index_df)):
+        col.append(assign_df.iloc[i].tolist().index(1)+1)
+
+    df_res = pd.DataFrame(data={"N° Projet":col}, index=index_df)
+    df_res.to_excel("Resultats.xlsx")
+#%%   
 
 def simplifier_dataframe(df):
     df_copy = df.copy()
