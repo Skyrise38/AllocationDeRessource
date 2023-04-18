@@ -245,7 +245,68 @@ def Resultats(path):
     df_res.to_excel("Resultats.xlsx")
     
 #%%
-def get_results_melange(assign):
+def Resultats_melange(path):
+    
+    def solve(max_projects):
+        # initialize the model object
+        m = gp.Model(f"project_assignment_{max_projects}")
+        
+        assign = m.addVars(permutations, vtype=GRB.BINARY, name="assign")
+        use_project = m.addVars(projects, vtype=GRB.BINARY, name="use_project")
+
+        # each student has one and only one project group
+        m.addConstrs(
+            (assign.sum(student, "*") == 1 for student in students),
+            name="EachStudentAssignedToOneProject"
+        )
+
+        # projects can't exceed the maximum number of students
+        m.addConstrs(
+            (assign.sum("*", project) <= MAX_STUDENTS_PER_PROJECT for project in projects),
+            name="LimitGroupSize"
+        )
+
+        # projects must be considered 'in use' if any students are assigned
+        m.addConstrs(
+            (use_project[project] >= assign[(student, project)] for student in students for project in projects),
+            name="ProjectMustBeInUseIfAnyStudentsAssigned"
+        )
+
+        # don't exceed max number of projects
+        m.addConstr(use_project.sum() <= max_projects, name="MaxProjects")
+
+        # if any students are assigned to a project, the project must have at least 2 students
+        m.addConstrs(
+            (assign.sum("*", project) >= use_project[project] * MIN_STUDENTS_PER_PROJECT for project in projects),
+            name="ProjectsInUseMustHaveAtLeastTwoStudents"
+        )
+
+        # put students together who both indicated the other
+        for student1, student2 in together:
+            m.addConstrs(
+                (assign[(student1, project)] == assign[(student2, project)] for project in projects),
+                name=f"PairStudents[{(student1, student1)}]"
+            )
+        
+        # keep students apart who contraindicated another
+        for student1, student2 in apart:
+            m.addConstrs(
+                (
+                    (assign[(student1, project)] + assign[(student2, project)]
+                ) <= 1 for project in projects),
+                name=f"ApartStudents[{(student1, student1)}]"
+            )
+
+        # set the objective function to be minimized
+        m.setObjective(
+            (ratings.prod(assign) - 1)**2,
+            sense=GRB.MINIMIZE,
+        )
+
+        m.optimize()
+        return m, assign
+    
+    def get_results(assign):
         """ Take the dict of results and turn it into useful DataFrames """
         
         # create df with impossible placeholder
@@ -340,7 +401,8 @@ def get_results_melange(assign):
 
     df_res = pd.DataFrame(data={"N° Projet":col}, index=index_df)
     df_res.to_excel("Resultats.xlsx")
-#%%   
+    
+#%%
 
 def simplifier_dataframe(df):
     df_copy = df.copy()
