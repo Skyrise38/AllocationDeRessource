@@ -718,7 +718,6 @@ def resultat_algo(tab_dataframes,tab_matrices):
                             index_resultat.append(indexes[j])
                 for j in range (0,len(indexes)):
                     list_projets.append(df_resultat.columns.tolist()[index_resultat[j][1]])
-                print(list_projets)
                 if list_projets not in tab_list_projets:
                     tab_list_projets.append(list_projets)
                     succes_indexes.append(indexes)
