@@ -1,78 +1,26 @@
-#%%
+###################### PROJET ALLOCATION DE RESSOURCE ######################
 
-#                         TRIER IMPORT !!!!!!!!!!
 
-import openpyxl
-from openpyxl import load_workbook
-from openpyxl import Workbook
+
+
+#%% IMPORTS
+
 import random
-import munkres
-from munkres import Munkres, print_matrix
-from tkinter import * 
-from tkinter import messagebox
-import tkinter as tk
+from munkres import Munkres
 import matplotlib.pyplot as plt
-import numpy as np
 import os
 import pandas as pd
 from itertools import combinations
 from copy import copy
-import numpy as np
-import styleframe
-from styleframe import StyleFrame
-
-from tkinter import * 
-from tkinter import messagebox
-import tkinter as tk
-from tkinter import ttk
 from tkinter import filedialog
-from tkinter.filedialog import askopenfilename
-import time 
-from time import strftime
-import datetime 
-from datetime import datetime, timedelta
-from pathlib import Path
-import os, shutil
+from tkinter import ttk
 from tkinter.ttk import Progressbar,Treeview
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from tkinter.colorchooser import askcolor
-import random
-import openpyxl
-from openpyxl import load_workbook
-from openpyxl import Workbook
-import random
-import munkres
-from munkres import Munkres, print_matrix
-from tkinter import * 
-import numpy as np
-import os
-import pandas as pd
-from itertools import combinations
-from copy import copy
-import numpy as np
-from tkinter import OptionMenu
-from tkinter import StringVar
-from tkinter import Spinbox
-from tkinter import Label
-from tkinter import Button
-from tkinter import Tk,Toplevel,IntVar,Entry, Frame, Scrollbar
-
-#%%
-
+from tkinter import Tk,Toplevel,IntVar,Entry, Frame, Scrollbar, OptionMenu, StringVar, Spinbox, Label, Button, messagebox, W, E, DISABLED
 import gurobipy as gp
 from gurobipy import GRB
 
-MAX_STUDENTS_PER_PROJECT = 4
-MIN_STUDENTS_PER_PROJECT = 3
 #%%
 
-#                               SUPPRIMER VARIABLES GLOBALES !!!!!
-nb_personnes_par_projet=3
-#nb_projet=18
-#nb_test=10
 nb_choix=3
 nb_eleves=30
 tab_color=["red","blue"]
@@ -84,6 +32,8 @@ Ensemble=[]
 Separe=[]
 Label_contraintes=[]
 Bouton_contraintes=[]
+MAX_STUDENTS_PER_PROJECT = 4
+MIN_STUDENTS_PER_PROJECT = 3
 
 
 #%% 
@@ -486,7 +436,7 @@ def duplication_dataframe(df,combinaisons):
                 progression_bar()
                 fenetre_accueil.update_idletasks()
             # Arret à 100 pour faire des tests
-            if progression==1000:
+            if progression==100:
                 return tab_dataframe
             #print(len(tab_dataframe))
     return tab_dataframe
@@ -701,7 +651,7 @@ def resultat_algo(tab_dataframes,tab_matrices):
                 progression_bar()
                 fenetre_accueil.update_idletasks()
             # Arret à 100 pour faire des tests
-            if progression==1000:
+            if progression==100:
                 print("Nombre de succes : {}".format(compteur))
                 return succes_indexes,succes_tab_matrices,succes_tab_dataframes
             fenetre_accueil.update_idletasks()
@@ -838,18 +788,34 @@ def enregistrer_resultat(index,dataframe):
         with pd.ExcelWriter("Resultat.xlsx") as writer: 
             df_resultat.to_excel(writer, sheet_name="test")
             df_resultat2.to_excel(writer, sheet_name="test1")
-    else : 
-            with pd.ExcelWriter(zone_nom_excel.get()+".xlsx") as writer:  
-                df_resultat.to_excel(writer, sheet_name="test")
-                df_resultat2.to_excel(writer, sheet_name="test1")
-            """
-            excel_writer = StyleFrame.ExcelWriter(zone_nom_excel.get()+".xlsx")
-            sf = StyleFrame(df_resultat)
-            sf.to_excel(
-                excel_writer=excel_writer, 
-                best_fit=df_resultat.columns.tolist())
-            excel_writer.save()"""
             
+    
+            for column in df_resultat:
+                column_length = max(df_resultat[column].astype(str).map(len).max(), len(column))
+                col_idx = df_resultat.columns.get_loc(column)
+                writer.sheets["test"].set_column(col_idx, col_idx, column_length)
+                
+            for column in df_resultat2:
+                column_length = max(df_resultat2[column].astype(str).map(len).max(), len(column))
+                col_idx = df_resultat2.columns.get_loc(column)
+                writer.sheets["test1"].set_column(col_idx, col_idx, column_length)
+    else : 
+        with pd.ExcelWriter(zone_nom_excel.get()+".xlsx") as writer:  
+            df_resultat.to_excel(writer, sheet_name="test")
+            df_resultat2.to_excel(writer, sheet_name="test1")
+            
+            for column in df_resultat:
+                column_length = max(df_resultat[column].astype(str).map(len).max(), len(column))
+                col_idx = df_resultat.columns.get_loc(column)
+                writer.sheets["test"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["test"].set_column(0, 0, 20)  
+            for column in df_resultat2:
+                column_length = max(df_resultat2[column].astype(str).map(len).max(), len(column))
+                col_idx = df_resultat2.columns.get_loc(column)
+                writer.sheets["test1"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["test1"].set_column(0, 0, 20) 
+        
+   
         
 #%%
 def fenetre_principale():
@@ -972,12 +938,7 @@ def charger_fichier():
         fichier_path.set(os.path.basename(fichier))
     path_label.config(text=fichier_path.get())
     
-#%%
 
-df = simplifier_dataframe(df)
-eleves = df.index.tolist()
-eleves.insert(0,"")
-eleves_copy = eleves.copy()
 #%% 
 
 def fenetre_contraintes():
@@ -1234,10 +1195,9 @@ def creation_matrice_aleatoire(nb_eleves,nb_projet,nb_choix,nb_personnes_par_pro
 
 #%%
 #ORDRE : nb_eleves/nb_projet/nb_personnes_par_projet/nb_choix/nb_test
-# 50/18/3/3
 
 #Fonction bouton test
-def test():
+def tests():
     #test_nb_personnes_par_projet("Nombre de personnes par projet",1,4,1,36,20,3,10,tab_label)
     #test_nb_choix("Nombre de choix par élève",1,4,1,50,18,3,10,tab_label)
     test_nb_eleves("Nombre d'élèves",20,40,5,18,3,3,10,tab_label)
@@ -1424,8 +1384,10 @@ def creation_graphique_test_nb_projet(nom_variable,x,y1,y2,xlabel,tab_color,nb_p
     ax.set_title("Test du nombre de projet avec {} élèves, {} élèves par projet et {} choix par élève".format(nb_eleves,nb_personnes_par_projet,nb_choix),fontsize=12)
     plt.show()
 
-#%%
+#%% MAIN
 
-#%% 
-
+df = simplifier_dataframe(df)
+eleves = df.index.tolist()
+eleves.insert(0,"")
+eleves_copy = eleves.copy()
 fenetre_munkres()
