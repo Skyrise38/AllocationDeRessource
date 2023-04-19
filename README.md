@@ -30,6 +30,19 @@ Pour l'installer il faudra :
 - Cliquez ensuite sur INSTALL et suivez les instructions 
 
 # __III -  Comment utiliser l'application__
+
+- 1-  En arrivant sur l'interface graphique vous avez le choix entre 2 algorithmes pour répartir les élèves dans les projets: 
+    - Munkres : cet algorithme permet d'avoir l'ensemble des solutions disponibles et vous permettra de selectionner celle qui vous convient le mieux. Cet algorithme est en revanche assez long à trouver les solutions.
+    - Guroby : cet algorithme est beaucoup plus rapide que le premier en revanche il ne vous sera pas possible de changer de solution. 
+- 2- Vous devrez dans un second temps choisir le fichier excel dans lequel les étudiants auront fait leurx choix. Une fois celui-ci selectionné vous devrez pouvoir visualiser le nom de celui-ci.
+
+- 3- Cliquez ensuite sur le bouton "Generer solution" pour générer le tableau d'attribution. Attention l'excel ne sera pas encore enregistré.
+
+- 4- Vous pouvez prévisualiser votre excel avec le bouton "Afficher"
+
+- 5- Si la répartition des élèves vous convient vous pouvez l'enregistrer avec le bouton "Enregitrer" en ayant au préalable rentré un nom de excel. 
+- 6- Le fichier sera enregistré dans le dossier ou est lancé de programme. 
+
  
 
 # Auteurs
