@@ -18,6 +18,8 @@ import pandas as pd
 from itertools import combinations
 from copy import copy
 import numpy as np
+import styleframe
+from styleframe import StyleFrame
 
 from tkinter import * 
 from tkinter import messagebox
@@ -59,12 +61,12 @@ from tkinter import Button
 from tkinter import Tk,Toplevel,IntVar,Entry, Frame, Scrollbar
 
 #%%
-"""
+
 import gurobipy as gp
 from gurobipy import GRB
 
 MAX_STUDENTS_PER_PROJECT = 4
-MIN_STUDENTS_PER_PROJECT = 3"""
+MIN_STUDENTS_PER_PROJECT = 3
 #%%
 
 #                               SUPPRIMER VARIABLES GLOBALES !!!!!
@@ -83,7 +85,9 @@ Separe=[]
 Label_contraintes=[]
 Bouton_contraintes=[]
 
-
+"""
+fichier_path.get()
+fichier_path.get().find("\\",-1)"""
 
 #%% 
 
@@ -243,167 +247,6 @@ def Resultats(path):
 
     df_res = pd.DataFrame(data={"N° Projet":col}, index=index_df)
     df_res.to_excel("Resultats.xlsx")
-    
-
-#%%
-def Resultats_melange(path):
-    
-    def solve(max_projects):
-        # initialize the model object
-        m = gp.Model(f"project_assignment_{max_projects}")
-        
-        assign = m.addVars(permutations, vtype=GRB.BINARY, name="assign")
-        use_project = m.addVars(projects, vtype=GRB.BINARY, name="use_project")
-
-        # each student has one and only one project group
-        m.addConstrs(
-            (assign.sum(student, "*") == 1 for student in students),
-            name="EachStudentAssignedToOneProject"
-        )
-
-        # projects can't exceed the maximum number of students
-        m.addConstrs(
-            (assign.sum("*", project) <= MAX_STUDENTS_PER_PROJECT for project in projects),
-            name="LimitGroupSize"
-        )
-
-        # projects must be considered 'in use' if any students are assigned
-        m.addConstrs(
-            (use_project[project] >= assign[(student, project)] for student in students for project in projects),
-            name="ProjectMustBeInUseIfAnyStudentsAssigned"
-        )
-
-        # don't exceed max number of projects
-        m.addConstr(use_project.sum() <= max_projects, name="MaxProjects")
-
-        # if any students are assigned to a project, the project must have at least 2 students
-        m.addConstrs(
-            (assign.sum("*", project) >= use_project[project] * MIN_STUDENTS_PER_PROJECT for project in projects),
-            name="ProjectsInUseMustHaveAtLeastTwoStudents"
-        )
-
-        # put students together who both indicated the other
-        for student1, student2 in together:
-            m.addConstrs(
-                (assign[(student1, project)] == assign[(student2, project)] for project in projects),
-                name=f"PairStudents[{(student1, student1)}]"
-            )
-        
-        # keep students apart who contraindicated another
-        for student1, student2 in apart:
-            m.addConstrs(
-                (
-                    (assign[(student1, project)] + assign[(student2, project)]
-                ) <= 1 for project in projects),
-                name=f"ApartStudents[{(student1, student1)}]"
-            )
-
-        # set the objective function to be minimized
-        m.setObjective(
-            (ratings.prod(assign) - 1)**2,
-            sense=GRB.MINIMIZE,
-        )
-
-        m.optimize()
-        return m, assign
-    
-    def get_results(assign):
-        """ Take the dict of results and turn it into useful DataFrames """
-        
-        # create df with impossible placeholder
-        assign_df = pd.DataFrame(-1, index=students, columns=projects)
-
-        # fill in the decision variable results
-        for (i, j), x_ij in assign.items():
-            assign_df.loc[i, j] = int(x_ij.X)
-
-        # sanity check that none were missed
-        assert ((assign_df == 0) | (assign_df == 1)).all().all()
-        
-        # count how many students got their nth choice
-        choices = (assign_df * rank_df).values.ravel()
-        choices = choices[choices > 0]
-        n_ranks = pd.Series(choices).value_counts().rename(index=lambda x: f"choice {x}")
-
-        # count up how big the group sizes are
-        group_sizes = assign_df.sum(axis="rows").sort_values(ascending=False).rename("n").sort_values(ascending=False)
-        
-        return assign_df, n_ranks, group_sizes
-    
-    #########     Chargement des données   ############        
-    Xdf = pd.read_excel(path)
-    Xdf=Xdf.replace(r'^\s*$',10,regex=True) #si tableau vide avec des 1
-    Xdf=Xdf.replace(0,10,regex=True)
-    Xdf = Xdf.fillna(10)
-    Xdf.index=Xdf["N° projet"].tolist()
-        
-    students = Xdf["N° projet"].tolist()
-    Xdf=Xdf.drop("N° projet", axis=1)
-
-
-    #########     Mélange des lignes du dataframe         ############
-            
-    Xdf=Xdf.sample(frac=1)
-            
-            
-    #########     Mélange de l'ordre des colonnes du DF   ############
-            
-    Xdf = Xdf.sample(frac=1, axis=1)
-            
-            
-    #########     Changement des choix des élèves         ############
-            
-    #Xdf = Xdf.apply(np.random.permutation)
-            
-    #########     Nombre de projets et d'élèves         ############
-            
-    #I = Xdf.shape[0] # Nombre d'élèves
-    #J = Xdf.shape[1] # Nombre de projets
-            
-    #########     Création du tableau avec le numéro des projets         ############
-        
-    projects = Xdf.columns.tolist()
-    rank_df =Xdf
-            
-    #########     Liste des élèves ensemble        ############
-            
-    # Example : together = [("Student 01", "Student 13"), ("Student 05", "Student 06")]
-            
-    together = [
-            
-    ]
-            
-    #########     Liste des élèves à séparer        ############
-            
-    apart = [
-            
-    ]
-            
-    permutations, ratings = gp.multidict({
-        (i, j): rank_df.loc[i, j]
-        for i in students
-        for j in projects
-        })
-            
-            
-    m, assign = solve(max_projects=20)
-    assign_df, n_ranks, group_sizes = get_results(assign)
-           
-    if (n_ranks[0]==len(students)):
-        print("Tous les élèves ont leur premier choix")
-            
-    #assign_df.to_excel('Resultats.xlsx')
-    
-    col = []
-    index_df = assign_df.index.tolist()
-    
-    for i in range (len(index_df)):
-        col.append(assign_df.iloc[i].tolist().index(1)+1)
-
-    df_res = pd.DataFrame(data={"N° Projet":col}, index=index_df)
-    df_res.to_excel("Resultats.xlsx")   
-#%%
-def Resultats_melange(path):
     
     def solve(max_projects):
         # initialize the model object
@@ -721,7 +564,6 @@ def choix_algo_munkres():
     zone_de_texte.destroy()
     label_nb_solutions.destroy()
     progression_algo.destroy()
-    
     bouton_contrainte.destroy()
     nb_max_projets.destroy()
     label_max_projets.destroy()
@@ -803,7 +645,7 @@ def choix_algo_guroby():
    bouton_munkres.config(bg="white",activebackground="white")
    var_algo.set(1)
    global bouton_contrainte
-   bouton_contrainte=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Contrainte", font=('Courier', 11,'italic'),command=fenetre_contraintes)
+   bouton_contrainte=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Contrainte", font=('Courier', 11,'italic'),state=DISABLED,command=fenetre_contraintes)
    bouton_contrainte.grid(column=0, columnspan=4,row=5)
    
    global label_max_projets
@@ -827,9 +669,6 @@ def choix_algo_guroby():
    
    bouton_generer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Generer solution", font=('Courier', 11,'italic'),command=combinaisons_algo)
    bouton_generer.grid(column=0, row=6)
-   
-   bouton_generer2=Button(fenetre_accueil, bg="white",activebackground="white",text="2eme solution",font=('Courier', 11,'italic'),command=combinaisons_algo)
-   bouton_generer2.grid(column=1, row=6)
    
    bouton_afficher=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=lambda:affichage_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
    bouton_afficher.grid(column=2, row=6)
@@ -949,15 +788,57 @@ def affichage_resultat(index,dataframe):
 def enregistrer_resultat(index,dataframe):
     index_df = []
     col1 = []
+    col2_1 = []
+    col2_2 = []
+    col2_3 = []
+    col2_4 = []
+    for k in range(len(projets)):
+        col2_1.append("")
+        col2_2.append("")
+        col2_3.append("")
+        col2_4.append("")
+
     for i in range(len(index)):
         index_df.append(dataframe.index.tolist()[i])
         col1.append(dataframe.columns.tolist()[index[i][1]])
     df_resultat = pd.DataFrame(data={"N° Projet":col1}, index=index_df)
+    print(df_resultat)
+    for j in range(len(col1)):
+        print(j)
+        indice = projets.index(col1[j])
+        print(indice)
+        if col2_1[indice]=="":
+            col2_1[indice]=index_df[j]
+        elif col2_2[indice]=="":
+            col2_2[indice]=index_df[j]
+        elif col2_3[indice]=="":
+            col2_3[indice]=index_df[j]
+        else :
+            col2_4[indice]=index_df[j]
+
+    df_resultat = pd.DataFrame(data={"N° Projet":col1}, index=index_df)
     df_resultat.sort_index(inplace=True)
+    df_resultat2 = pd.DataFrame(data={"1er étudiant":col2_1,"2eme étudiant":col2_2,"3eme étudiant":col2_3,"4eme étudiant":col2_4},index=projets)
+    df_resultat2.sort_index(inplace=True)
+
+
     if zone_nom_excel.get()=="":
-        df_resultat.to_excel("Resultat.xlsx")
+        with pd.ExcelWriter("Resultat.xlsx") as writer: 
+            df_resultat.to_excel(writer, sheet_name="test")
+            df_resultat2.to_excel(writer, sheet_name="test1")
     else : 
-        df_resultat.to_excel(zone_nom_excel.get()+".xlsx")
+            with pd.ExcelWriter(zone_nom_excel.get()+".xlsx") as writer:  
+                df_resultat.to_excel(writer, sheet_name="test")
+                df_resultat2.to_excel(writer, sheet_name="test1")
+            """
+            excel_writer = StyleFrame.ExcelWriter(zone_nom_excel.get()+".xlsx")
+            sf = StyleFrame(df_resultat)
+            sf.to_excel(
+                excel_writer=excel_writer, 
+                best_fit=df_resultat.columns.tolist())
+            excel_writer.save()"""
+            
+        
 #%%
 def fenetre_principale():
     global fenetre_accueil
@@ -1315,23 +1196,13 @@ def combinaisons_algo():
     #ALGO GUROBY
     elif var_algo.get()==1 : 
         Resultats(fichier_path.get())
-
-def bouton_deuxieme_solution_guroby():
-    if fichier_path.get()=="Aucun fichier chargé":
-        messagebox.showinfo("Erreur","Veuillez sélectionner un fichier")
-        return
-    Resultats_melange(fichier_path.get())
     
 #%% 
 
-def fenetre_munkres(nb_eleves):
+def fenetre_munkres():
     fenetre_principale()
         
-         
-    
-#%% 
 
-fenetre_munkres(nb_eleves)
 #%% 
  
     
@@ -1438,7 +1309,6 @@ def test_nb_choix(nom_variable,borne_inf,borne_supp,pas,nb_eleves,nb_projet,nb_p
         borne_inf+=pas
     creation_graphique_test_nb_choix(nom_variable,tab_x,tab_y_reussite_matrice,tab_y_reussite_eleves,tab_xlabel,tab_color,nb_eleves,nb_projet,nb_personnes_par_projet,tab_label)
 
-
 #Fonction test nombre de personnes par projet
 def test_nb_personnes_par_projet(nom_variable,borne_inf,borne_supp,pas,nb_eleves,nb_projet,nb_choix,nb_test,tab_label):
     if verif_test(borne_inf,borne_supp,pas)==0:
@@ -1465,8 +1335,6 @@ def test_nb_personnes_par_projet(nom_variable,borne_inf,borne_supp,pas,nb_eleves
         tab_y_reussite_matrice.append(pourcentage_reussite_matrice)
         borne_inf+=pas
     creation_graphique_test_nb_personnes_par_projet(nom_variable,tab_x,tab_y_reussite_matrice,tab_y_reussite_eleves,tab_xlabel,tab_color,nb_eleves,nb_projet,nb_choix,tab_label)
-
-
 
 #Fonction test nombre d'élèves
 def test_nb_eleves(nom_variable,borne_inf,borne_supp,pas,nb_projet,nb_personnes_par_projet,nb_choix,nb_test,tab_label):
@@ -1548,12 +1416,6 @@ def creation_graphique_test_nb_projet(nom_variable,x,y1,y2,xlabel,tab_color,nb_p
 
 #%%
 
-dataframe= pd.read_excel("Resultats.xlsx",index_col=0)
-col = []
-index_df = dataframe.index.tolist()
-#%%
-for i in range (len(index_df)):
-    col.append(dataframe.iloc[i].tolist().index(1)+1)
+#%% 
 
-dataframe_resultat = pd.DataFrame(data={"N° Projet":col}, index=index_df)
-dataframe_resultat.to_excel("Resultats_nouveau.xlsx")
+fenetre_munkres()
