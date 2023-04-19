@@ -77,17 +77,14 @@ nb_choix=3
 nb_eleves=30
 tab_color=["red","blue"]
 tab_label=["% Réussite matrice","% Réussite élève"]
-fichier_excel = r"C:\Users\robin\OneDrive\Documents\Projet IESE4 - Allocation de ressources\AllocationDeRessource\attribution sujets.xlsx"
-df= pd.read_excel(fichier_excel,index_col=0)
+fichier_excel ="attribution sujets.xlsx"
+df=pd.read_excel(fichier_excel,index_col=0)
 Contraintes = ["Ensemble","Séparé"]
 Ensemble=[]
 Separe=[]
 Label_contraintes=[]
 Bouton_contraintes=[]
 
-"""
-fichier_path.get()
-fichier_path.get().find("\\",-1)"""
 
 #%% 
 
@@ -693,7 +690,9 @@ def resultat_algo(tab_dataframes,tab_matrices):
     succes_tab_matrices=[]
     succes_tab_dataframes=[]
     succes_indexes=[]
+    tab_list_projets = []
     for i in range(len(tab_matrices)):
+            list_projets = []
             print(i)
             progression+=1
             if (progression/segment)%1==0:
@@ -707,7 +706,17 @@ def resultat_algo(tab_dataframes,tab_matrices):
             temp=tab_matrices_copy[i].copy()
             indexes = m.compute(temp)
             if (sum([tab_matrices[i][k[0]][k[1]] for k in indexes])==30):
-                if indexes not in succes_indexes:
+                df_resultat = tab_dataframes_copy[i].sort_index()
+                noms_resultat = df_resultat.index.tolist()
+                index_resultat = []
+                for nom1 in noms_resultat : 
+                    for j in range(len(tab_dataframes_copy[i].index.tolist())):
+                        if nom1==tab_dataframes_copy[i].index.tolist()[j]:
+                            index_resultat.append(indexes[j])
+                for j in range (len(indexes)):
+                    list_projets.append(df_resultat.columns.tolist()[index_resultat[j][1]])
+    
+                if list_projets not in tab_list_projets:
                     succes_indexes.append(indexes)
                     succes_tab_matrices.append(tab_matrices_copy[i])
                     succes_tab_dataframes.append(tab_dataframes_copy[i])
@@ -956,10 +965,8 @@ def charger_fichier():
     fichier = filedialog.askopenfilename()
     if fichier == "":
         fichier_path.set("Aucun fichier chargé")
-        path_label.config(font=("Courier", 12,"italic"))
     else:
-        fichier_path.set(fichier)
-        path_label.config(font=("Courier", 6,"italic"))
+        fichier_path.set(os.path.basename(fichier))
     path_label.config(text=fichier_path.get())
     
 #%%
