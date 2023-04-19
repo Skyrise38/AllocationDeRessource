@@ -486,9 +486,9 @@ def duplication_dataframe(df,combinaisons):
                 progression_bar()
                 fenetre_accueil.update_idletasks()
             # Arret à 100 pour faire des tests
-            if progression==100:
+            if progression==1000:
                 return tab_dataframe
-            print(len(tab_dataframe))
+            #print(len(tab_dataframe))
     return tab_dataframe
 
 #%%
@@ -680,6 +680,8 @@ def choix_algo_guroby():
    bouton_enregistrer.grid(column=0,columnspan=4, row=8)
 
 #%%
+
+#%%
 #Test
 def resultat_algo(tab_dataframes,tab_matrices):
     tab_matrices_copy = tab_matrices.copy()
@@ -691,15 +693,16 @@ def resultat_algo(tab_dataframes,tab_matrices):
     succes_tab_dataframes=[]
     succes_indexes=[]
     tab_list_projets = []
-    for i in range(len(tab_matrices)):
+    for i in range(0,len(tab_matrices)):
             list_projets = []
-            print(i)
+            #print(i)
             progression+=1
             if (progression/segment)%1==0:
                 progression_bar()
                 fenetre_accueil.update_idletasks()
             # Arret à 100 pour faire des tests
-            if progression==100:
+            if progression==1000:
+                print("Nombre de succes : {}".format(compteur))
                 return succes_indexes,succes_tab_matrices,succes_tab_dataframes
             fenetre_accueil.update_idletasks()
             m = Munkres()
@@ -710,13 +713,14 @@ def resultat_algo(tab_dataframes,tab_matrices):
                 noms_resultat = df_resultat.index.tolist()
                 index_resultat = []
                 for nom1 in noms_resultat : 
-                    for j in range(len(tab_dataframes_copy[i].index.tolist())):
+                    for j in range(0,len(tab_dataframes_copy[i].index.tolist())):
                         if nom1==tab_dataframes_copy[i].index.tolist()[j]:
                             index_resultat.append(indexes[j])
-                for j in range (len(indexes)):
+                for j in range (0,len(indexes)):
                     list_projets.append(df_resultat.columns.tolist()[index_resultat[j][1]])
-    
+                print(list_projets)
                 if list_projets not in tab_list_projets:
+                    tab_list_projets.append(list_projets)
                     succes_indexes.append(indexes)
                     succes_tab_matrices.append(tab_matrices_copy[i])
                     succes_tab_dataframes.append(tab_dataframes_copy[i])
