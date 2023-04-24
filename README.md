@@ -1,11 +1,22 @@
 
 # __I -  Librairies à installer__
+Si vous utilisez l'environement anaconda il vous suffira de réaliser les commandes suivantes : 
+```
+pip install gurobipy
+pip install munkres
+```
+Si vous n'utilisez pas anaconda il faudra installer les librairies avec les conades suivantes : 
 
 ```
 pip install pandas
 pip install gurobipy
 pip install tkinter
+pip install openpyxl
+pip install munkres
+pip install matplotlib
+pip install more-itertools
 ```
+
 Vous aurez peut être à changer pip par pip3 ou conda selon ce que vous utiliser. 
 
 # __II -  Installer la licence universitaire de Guroby__
