@@ -15,18 +15,16 @@ from copy import copy
 from tkinter import filedialog
 from tkinter import ttk
 from tkinter.ttk import Progressbar,Treeview
-from tkinter import Tk,Toplevel,IntVar,Entry, Frame, Scrollbar, OptionMenu, StringVar, Spinbox, Label, Button, messagebox, W, E, DISABLED
+from tkinter import Tk,Toplevel,IntVar,Entry, Frame, Scrollbar, OptionMenu, StringVar, Spinbox, Label, Button, messagebox, W, E, DISABLED, NORMAL
 import gurobipy as gp
 from gurobipy import GRB
+
 
 #%%
 
 nb_choix=3
-nb_eleves=30
 tab_color=["red","blue"]
 tab_label=["% Réussite matrice","% Réussite élève"]
-fichier_excel ="attribution sujets.xlsx"
-df=pd.read_excel(fichier_excel,index_col=0)
 Contraintes = ["Ensemble","Séparé"]
 Ensemble=[]
 Separe=[]
@@ -56,8 +54,6 @@ def Resultats(path,MAX_STUDENTS_PER_PROJECT,MIN_STUDENTS_PER_PROJECT,max_project
             name="LimitGroupSize"
         )
         
-        print(MAX_STUDENTS_PER_PROJECT)
-        print(MIN_STUDENTS_PER_PROJECT)
 
         # projects must be considered 'in use' if any students are assigned
         m.addConstrs(
@@ -122,16 +118,19 @@ def Resultats(path,MAX_STUDENTS_PER_PROJECT,MIN_STUDENTS_PER_PROJECT,max_project
         
         return assign_df, n_ranks, group_sizes
     
+    
+                
     #########     Chargement des données   ############        
-    Xdf = pd.read_excel(path)
+    Xdf = pd.read_excel(path) 
+    Xdf.index=Xdf["N° projet"].tolist()
+    Xdf=Xdf.drop("N° projet", axis=1)
+    Xdf = Xdf.loc[(Xdf==1).any(axis=1)]
     Xdf=Xdf.replace(r'^\s*$',10,regex=True) #si tableau vide avec des 1
     Xdf=Xdf.replace(0,10,regex=True)
-    Xdf = Xdf.fillna(10)
-    Xdf.index=Xdf["N° projet"].tolist()
-        
-    students = Xdf["N° projet"].tolist()
-    Xdf=Xdf.drop("N° projet", axis=1)
-
+    Xdf = Xdf.fillna(10)   
+    students = Xdf.index.tolist()
+    
+#%%
 
     #########     Mélange des lignes du dataframe         ############
             
@@ -182,18 +181,24 @@ def Resultats(path,MAX_STUDENTS_PER_PROJECT,MIN_STUDENTS_PER_PROJECT,max_project
     assign_df, n_ranks, group_sizes = get_results(assign)
            
     if (n_ranks[0]==len(students)):
-        print("Tous les élèves ont leur premier choix")
-            
-    #assign_df.to_excel('Resultats.xlsx')
+        messagebox.showinfo("Résultat", "Solution valide trouvée")
+
+    else:
+        messagebox.showinfo("Résultat", "Solution non valide trouvée")
+    
+    bouton_afficher.configure(state=NORMAL)
+    bouton_enregistrer.configure(state=NORMAL)        
     
     col = []
     index_df = assign_df.index.tolist()
     
     for i in range (len(index_df)):
         col.append(assign_df.iloc[i].tolist().index(1)+1)
-
+        
+    global df_res
     df_res = pd.DataFrame(data={"N° Projet":col}, index=index_df)
-    df_res.to_excel("Resultats.xlsx")
+    df_res.sort_index(inplace=True)
+
     
     
     
@@ -202,10 +207,14 @@ def Resultats(path,MAX_STUDENTS_PER_PROJECT,MIN_STUDENTS_PER_PROJECT,max_project
 def simplifier_dataframe(df):
     df_copy = df.copy()
     df_copy = df_copy.loc[(df==1).any(axis=1)]
-    df_copy[df_copy!=1]=10
+    
+    df_copy=df_copy.replace(r'^\s*$',10,regex=True) #si tableau vide avec des 1
+    df_copy=df_copy.replace(0,10,regex=True)
+    df_copy = df_copy.fillna(10)
+    
     indexnames=[]
-    l1 = (df_copy.sum(axis=0).to_frame()[0]<=(nb_eleves*10-nb_choix*9)).tolist()
-    l2 = (df_copy.sum(axis=0).to_frame()[0]<=(nb_eleves*10-nb_choix*9)).index.tolist()
+    l1 = (df_copy.sum(axis=0).to_frame()[0]<=(df_copy.shape[0]*10-nb_choix*9)).tolist()
+    l2 = (df_copy.sum(axis=0).to_frame()[0]<=(df_copy.shape[0]*10-nb_choix*9)).index.tolist()
     for i in range(len(l1)):
         if l1[i]==False:
             indexnames.append(l2[i])
@@ -245,22 +254,20 @@ def generate_combinations(projets,nb_eleves):
     return solutions
 
 #%%
-
 def duplication_dataframe(df,combinaisons):
+    progression_algo['value']=0
     tab_dataframe=[]
     nb_combinaisons = 0
     progression = 0
     for key in combinaisons.keys():
         nb_combinaisons+=len(combinaisons[key])
-    segment = nb_combinaisons//100
+    segment=nb_combinaisons//100
     colonnes = df.columns.tolist()
     for key in combinaisons.keys():
         for i in range(0,len(combinaisons[key])):
             df_cour = df.copy()
             compteur = 0
-            
-            fenetre_accueil.update_idletasks()
-            
+            progression+=1
             for j in range(0,len(colonnes)):
                 if str(colonnes[j]) not in combinaisons[key][i]:
                     df_cour = df_cour.drop(colonnes[j],axis=1)
@@ -278,20 +285,16 @@ def duplication_dataframe(df,combinaisons):
             df_cour = df_cour.sample(frac=1)
             df_cour = df_cour.sample(frac=1, axis=1)
             tab_dataframe.append(df_cour)
-            progression+=1
-            if (progression/segment)%1 == 0:
-                progression_bar()
+            #Mise a jour barre de progression
+            if (progression%(segment*(pourcentage.get()/100))//1)==0:
+                progression_bar(0.5)
                 fenetre_accueil.update_idletasks()
-            # Arret à 100 pour faire des tests
-            if progression==100:
+            if(progression==(segment*pourcentage.get())):
                 return tab_dataframe
-            #print(len(tab_dataframe))
-    return tab_dataframe
 
 #%%
-
-def progression_bar():
-    progression_algo['value']+=0.5
+def progression_bar(val):
+    progression_algo['value']+=val
 #%%
 def conversion_dataframe_matrice(tab):
     tab_matrices = []
@@ -300,7 +303,6 @@ def conversion_dataframe_matrice(tab):
         tab_matrices.append(tableau[i].to_numpy())
     return tab_matrices
              
-
 #%%
 #Fonction verification Excel
 def verifier_excel(fichier_excel,nb_choix):
@@ -340,6 +342,8 @@ def fenetre_principale():
     fenetre_accueil.rowconfigure(5, weight=1)
     fenetre_accueil.rowconfigure(6, weight=1)
     fenetre_accueil.rowconfigure(7, weight=1)
+    fenetre_accueil.rowconfigure(8, weight=1)
+    fenetre_accueil.rowconfigure(9, weight=1)
     
     global var_algo
     var_algo = IntVar()
@@ -348,6 +352,10 @@ def fenetre_principale():
     global nom_excel
     nom_excel = StringVar()
     nom_excel.set("")
+    
+    global pourcentage
+    pourcentage = IntVar()
+    pourcentage.set(1)
     
     titre = Label(fenetre_accueil, bg="white", text="Affectation de projets", font=("Courier",20,"italic"))
     titre.grid(column=0, columnspan=4, row=0)
@@ -359,13 +367,13 @@ def fenetre_principale():
     bouton_munkres = Button(fenetre_accueil, bg="light green", activebackground="light green", text="Munkres", font=("Courier",12,"italic"),command=choix_algo_munkres)
     bouton_munkres.grid(column=1, columnspan=2, row=1)
     
-    global bouton_guroby
-    bouton_guroby = Button(fenetre_accueil, bg="white", activebackground="white", text="Guroby", font=("Courier",12,"italic"),command=choix_algo_guroby)
-    bouton_guroby.grid(column=2, columnspan=2, row=1)
+    global bouton_gurobi
+    bouton_gurobi = Button(fenetre_accueil, bg="white", activebackground="white", text="Gurobi", font=("Courier",12,"italic"),command=choix_algo_gurobi)
+    bouton_gurobi.grid(column=2, columnspan=2, row=1)
     
     global numero_solution
     numero_solution = StringVar()
-    numero_solution.set("1")
+    numero_solution.set("")
     
     global fichier_path
     fichier_path = StringVar()
@@ -383,56 +391,81 @@ def fenetre_principale():
     path_label= Label(fenetre_accueil,bg="white", text=fichier_path.get(),font=("Courier", 12,"italic"))
     path_label.grid(column=1,columnspan=3, row=3)
     
+    global label_pourcentage
+    label_pourcentage= Label(fenetre_accueil,bg="white", text="Pourcentage de combinaisons : ",font=("Courier", 12,"italic"))
+    label_pourcentage.grid(column=0, row=4, rowspan=2)
+    
+    global bouton_1_pourcent
+    bouton_1_pourcent = Button(fenetre_accueil, bg="light green", activebackground="light green", width=4, text="1%", font=("Courier",12,"italic"),command=bouton_1)
+    bouton_1_pourcent.grid(column=1, columnspan=2, row=4)
+    
+    global bouton_5_pourcent
+    bouton_5_pourcent = Button(fenetre_accueil, bg="white", activebackground="white", width=4, text="5%", font=("Courier",12,"italic"),command=bouton_5)
+    bouton_5_pourcent.grid(column=2, columnspan=2, row=4)
+    
+    global bouton_50_pourcent
+    bouton_50_pourcent = Button(fenetre_accueil, bg="white", activebackground="white", width=4, text="50%", font=("Courier",12,"italic"),command=bouton_50)
+    bouton_50_pourcent.grid(column=1, columnspan=2, row=5)
+    
+    global bouton_100_pourcent
+    bouton_100_pourcent = Button(fenetre_accueil, bg="white", activebackground="white", width=4, text="100%", font=("Courier",12,"italic"),command=bouton_100)
+    bouton_100_pourcent.grid(column=2, columnspan=2, row=5)
+       
     global bouton_generer
     bouton_generer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Generer solution", font=('Courier', 11,'italic'),command=combinaisons_algo)
-    bouton_generer.grid(column=0, row=4)
+    bouton_generer.grid(column=0, row=6)
     
     global bouton_afficher
-    bouton_afficher=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=lambda:affichage_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
-    bouton_afficher.grid(column=2, row=4)
+    bouton_afficher=Button(fenetre_accueil,bg="white" ,state=DISABLED,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=verif_numero_solution)
+    bouton_afficher.grid(column=2, row=6)
     
     global bouton_increment_solution
-    bouton_increment_solution=Button(fenetre_accueil, bg="white",activebackground="white", text="Precedent",font=('Courier', 11,'italic'),command=solution_precedente)
-    bouton_increment_solution.grid(column=1, row=4)
+    bouton_increment_solution=Button(fenetre_accueil, bg="white",state=DISABLED,activebackground="white", text="Precedent",font=('Courier', 11,'italic'),command=solution_precedente)
+    bouton_increment_solution.grid(column=1, row=6)
     
     global bouton_decrement_solution
-    bouton_decrement_solution=Button(fenetre_accueil, bg="white",activebackground="white", text="Suivant",font=('Courier', 11,'italic'),command=lambda:solution_suivante(len(succes_tab_dataframes)))
-    bouton_decrement_solution.grid(column=3, row=4)
+    bouton_decrement_solution=Button(fenetre_accueil, bg="white",state=DISABLED,activebackground="white", text="Suivant",font=('Courier', 11,'italic'),command=lambda:solution_suivante(len(succes_tab_dataframes)))
+    bouton_decrement_solution.grid(column=3, row=6)
     
     global label_nombre_solutions
-    label_nombre_solutions = Label(fenetre_accueil, bg="white", text="Nombre de solutions : ",font=("Courier", 12,"italic"))
-    label_nombre_solutions.grid(column=1, row=5)
+    label_nombre_solutions = Label(fenetre_accueil, bg="white", text="N° des solutions : ",font=("Courier", 12,"italic"))
+    label_nombre_solutions.grid(column=1, row=7)
     global zone_de_texte
     zone_de_texte = Entry(fenetre_accueil,bg="light green",justify="center",textvariable=numero_solution,text="")
-    zone_de_texte.grid(column=2,row=5)
+    zone_de_texte.grid(column=2,row=7)
+    zone_de_texte.bind('<Leave>', maj_numero)
     global label_nb_solutions
     label_nb_solutions = Label(fenetre_accueil,bg="white",text="/  0")
-    label_nb_solutions.grid(column=3, row=5,sticky=W)
+    label_nb_solutions.grid(column=3, row=7,sticky=W)
     global progression_algo
     progression_algo = Progressbar(fenetre_accueil,orient='horizontal',length=300,mode='determinate',value=0)
-    progression_algo.grid(column=0, row=5)
+    progression_algo.grid(column=0, row=7)
     
     global label_nom_excel
     label_nom_excel = Label(fenetre_accueil, bg="white", text="Nom du Excel : ",font=("Courier", 12,"italic"))
-    label_nom_excel.grid(column=0, row=6,sticky=E)
+    label_nom_excel.grid(column=0, row=8,sticky=E)
     
     global zone_nom_excel
     zone_nom_excel = Entry(fenetre_accueil,bg="light green",justify="center",textvariable=nom_excel,text="")
-    zone_nom_excel.grid(column=1,columnspan=3,row=6,sticky=W)
+    zone_nom_excel.grid(column=1,columnspan=3,row=8,sticky=W)
     
     global bouton_enregistrer
-    bouton_enregistrer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Enregistrer", font=('Courier', 11,'italic'),command=lambda:enregistrer_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
-    bouton_enregistrer.grid(column=0,columnspan=4, row=7)
-
+    bouton_enregistrer=Button(fenetre_accueil,bg="white" ,state=DISABLED,activebackground="white",text="Enregistrer", font=('Courier', 11,'italic'),command=lambda:enregistrer_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
+    bouton_enregistrer.grid(column=0,columnspan=4, row=9)
 
     fenetre_accueil.mainloop()
+    
+def maj_numero(event):
+    numero_solution.set(zone_de_texte.get())
+
+
 #%%
 
 def choix_algo_munkres():
     if var_algo.get()==0:
         return
     bouton_munkres.config(bg="light green",activebackground="light green")
-    bouton_guroby.config(bg="white",activebackground="white")
+    bouton_gurobi.config(bg="white",activebackground="white")
     var_algo.set(0)
     
     global bouton_charger_excel
@@ -449,6 +482,12 @@ def choix_algo_munkres():
     global zone_de_texte
     global label_nb_solutions
     global progression_algo
+    global label_pourcentage
+    global bouton_1_pourcent
+    global bouton_5_pourcent
+    global bouton_50_pourcent
+    global bouton_100_pourcent
+
     
     bouton_charger_excel.destroy()
     label_fichier.destroy()
@@ -474,27 +513,42 @@ def choix_algo_munkres():
     
     
     bouton_charger_excel=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Charger excel", font=('Courier', 11,'italic'),command=charger_fichier)
-    bouton_charger_excel.grid(column=0,columnspan=4, row=4)
+    bouton_charger_excel.grid(column=0,columnspan=4, row=2)
     
     label_fichier = Label(fenetre_accueil,bg="white", text="Fichier chargé :",font=("Courier", 12,"italic"))
-    label_fichier.grid(column=0, row=5)
+    label_fichier.grid(column=0, row=3)
     
     path_label= Label(fenetre_accueil,bg="white", text=fichier_path.get(),font=("Courier", 12,"italic"))
-    path_label.grid(column=1,columnspan=3, row=5)
+    path_label.grid(column=1,columnspan=3, row=3)
+    
+    label_pourcentage= Label(fenetre_accueil,bg="white", text="Pourcentage de combinaisons : ",font=("Courier", 12,"italic"))
+    label_pourcentage.grid(column=0, row=4, rowspan=2)
+    
+    bouton_1_pourcent = Button(fenetre_accueil, bg="light green", activebackground="light green", width=4, text="1%", font=("Courier",12,"italic"),command=bouton_1)
+    bouton_1_pourcent.grid(column=1, columnspan=2, row=4)
+    
+    bouton_5_pourcent = Button(fenetre_accueil, bg="white", activebackground="white", width=4, text="5%", font=("Courier",12,"italic"),command=bouton_5)
+    bouton_5_pourcent.grid(column=2, columnspan=2, row=4)
+    
+    bouton_50_pourcent = Button(fenetre_accueil, bg="white", activebackground="white", width=4, text="50%", font=("Courier",12,"italic"),command=bouton_50)
+    bouton_50_pourcent.grid(column=1, columnspan=2, row=5)
+    
+    bouton_100_pourcent = Button(fenetre_accueil, bg="white", activebackground="white", width=4, text="100%", font=("Courier",12,"italic"),command=bouton_100)
+    bouton_100_pourcent.grid(column=2, columnspan=2, row=5)
     
     bouton_generer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Generer solution", font=('Courier', 11,'italic'),command=combinaisons_algo)
     bouton_generer.grid(column=0, row=6)
     
-    bouton_afficher=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=lambda:affichage_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
+    bouton_afficher=Button(fenetre_accueil,bg="white" ,state=DISABLED,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=verif_numero_solution)
     bouton_afficher.grid(column=2, row=6)
     
-    bouton_increment_solution=Button(fenetre_accueil, bg="white",activebackground="white", text="Precedent",font=('Courier', 11,'italic'),command=solution_precedente)
+    bouton_increment_solution=Button(fenetre_accueil, bg="white",state=DISABLED,activebackground="white", text="Precedent",font=('Courier', 11,'italic'),command=solution_precedente)
     bouton_increment_solution.grid(column=1, row=6)
 
-    bouton_decrement_solution=Button(fenetre_accueil, bg="white",activebackground="white", text="Suivant",font=('Courier', 11,'italic'),command=lambda:solution_suivante(len(succes_tab_dataframes)))
+    bouton_decrement_solution=Button(fenetre_accueil, bg="white",state=DISABLED,activebackground="white", text="Suivant",font=('Courier', 11,'italic'),command=lambda:solution_suivante(len(succes_tab_dataframes)))
     bouton_decrement_solution.grid(column=3, row=6)
     
-    label_nombre_solutions = Label(fenetre_accueil, bg="white", text="Nombre de solutions : ",font=("Courier", 12,"italic"))
+    label_nombre_solutions = Label(fenetre_accueil, bg="white", text="N° des solutions : ",font=("Courier", 12,"italic"))
     label_nombre_solutions.grid(column=1, row=7)
     zone_de_texte = Entry(fenetre_accueil,bg="light green",justify="center",textvariable=numero_solution,text="")
     zone_de_texte.grid(column=2,row=7)
@@ -509,11 +563,11 @@ def choix_algo_munkres():
     zone_nom_excel = Entry(fenetre_accueil,bg="light green",justify="center",textvariable=nom_excel,text="")
     zone_nom_excel.grid(column=1,columnspan=3,row=8,sticky=W)
     
-    bouton_enregistrer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Enregistrer", font=('Courier', 11,'italic'),command=lambda:enregistrer_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
+    bouton_enregistrer=Button(fenetre_accueil,bg="white" ,state=DISABLED,activebackground="white",text="Enregistrer", font=('Courier', 11,'italic'),command=lambda:enregistrer_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
     bouton_enregistrer.grid(column=0,columnspan=4, row=9)
-    
-    
-def choix_algo_guroby():
+
+#%%
+def choix_algo_gurobi():
    if var_algo.get()==1:
        return
    
@@ -521,7 +575,6 @@ def choix_algo_guroby():
    fenetre_accueil.rowconfigure(8, weight=1)
    fenetre_accueil.rowconfigure(9, weight=1)
    fenetre_accueil.rowconfigure(10, weight=1)
-   fenetre_accueil.rowconfigure(11, weight=1)
    
    global bouton_charger_excel
    global label_fichier
@@ -531,6 +584,7 @@ def choix_algo_guroby():
    global label_nom_excel
    global zone_nom_excel
    global bouton_enregistrer
+   
    bouton_charger_excel.destroy()
    label_fichier.destroy()
    path_label.destroy()
@@ -538,6 +592,11 @@ def choix_algo_guroby():
    bouton_afficher.destroy()
    label_nom_excel.destroy()
    zone_nom_excel.destroy()
+   label_pourcentage.destroy()
+   bouton_1_pourcent.destroy()
+   bouton_5_pourcent.destroy()
+   bouton_50_pourcent.destroy()
+   bouton_100_pourcent.destroy()
    bouton_enregistrer.destroy()
    bouton_increment_solution.destroy()
    bouton_decrement_solution.destroy()
@@ -547,7 +606,7 @@ def choix_algo_guroby():
    progression_algo.destroy()
    
    
-   bouton_guroby.config(bg="light green",activebackground="light green")
+   bouton_gurobi.config(bg="light green",activebackground="light green")
    bouton_munkres.config(bg="white",activebackground="white")
    var_algo.set(1)
    global bouton_contrainte
@@ -596,7 +655,7 @@ def choix_algo_guroby():
    bouton_generer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Generer solution", font=('Courier', 11,'italic'),command=combinaisons_algo)
    bouton_generer.grid(column=0, row=8)
    
-   bouton_afficher=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=lambda:affichage_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
+   bouton_afficher=Button(fenetre_accueil,bg="white" ,state=DISABLED,activebackground="white",text="Afficher", font=('Courier', 11,'italic'),command=lambda:affichage_resultat_gurobi(df_res))
    bouton_afficher.grid(column=2, row=8)
    
    label_nom_excel = Label(fenetre_accueil, bg="white", text="Nom du Excel :",font=("Courier", 12,"italic"))
@@ -605,18 +664,49 @@ def choix_algo_guroby():
    zone_nom_excel = Entry(fenetre_accueil,bg="light green",justify="center",textvariable=nom_excel,text="")
    zone_nom_excel.grid(column=1,columnspan=3,row=9,sticky=W)
 
-   bouton_enregistrer=Button(fenetre_accueil,bg="white" ,activebackground="white",text="Enregistrer", font=('Courier', 11,'italic'),command=lambda:enregistrer_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1]))
+   bouton_enregistrer=Button(fenetre_accueil,bg="white" ,state=DISABLED,activebackground="white",text="Enregistrer", font=('Courier', 11,'italic'),command=lambda:enregistrer_gurobi(df_res))
    bouton_enregistrer.grid(column=0,columnspan=4, row=10)
 
 #%%
 
+def bouton_1():
+    pourcentage.set(1)
+    bouton_1_pourcent.config(bg="light green",activebackground="light green")
+    bouton_5_pourcent.config(bg="white",activebackground="white")
+    bouton_50_pourcent.config(bg="white",activebackground="white")
+    bouton_100_pourcent.config(bg="white",activebackground="white")
+    
+def bouton_5():
+    pourcentage.set(5)
+    bouton_1_pourcent.config(bg="white",activebackground="white")
+    bouton_5_pourcent.config(bg="light green",activebackground="light green")
+    bouton_50_pourcent.config(bg="white",activebackground="white")
+    bouton_100_pourcent.config(bg="white",activebackground="white")
+
+def bouton_50():
+    pourcentage.set(50)
+    bouton_1_pourcent.config(bg="white",activebackground="white")
+    bouton_5_pourcent.config(bg="white",activebackground="white")
+    bouton_50_pourcent.config(bg="light green",activebackground="light green")
+    bouton_100_pourcent.config(bg="white",activebackground="white")
+
+def bouton_100():
+    pourcentage.set(100)
+    bouton_1_pourcent.config(bg="white",activebackground="white")
+    bouton_5_pourcent.config(bg="white",activebackground="white")
+    bouton_50_pourcent.config(bg="white",activebackground="white")
+    bouton_100_pourcent.config(bg="light green",activebackground="light green")
+    
 #%%
 #Test
 def resultat_algo(tab_dataframes,tab_matrices):
     tab_matrices_copy = tab_matrices.copy()
     tab_dataframes_copy = tab_dataframes.copy()
-    compteur=0
-    segment = len(tab_matrices)//100
+    compteur = 0
+    nb_combinaisons = 0
+    for key in solutions.keys():
+        nb_combinaisons+=len(solutions[key])
+    segment = nb_combinaisons//100
     progression = 0
     succes_tab_matrices=[]
     succes_tab_dataframes=[]
@@ -624,20 +714,11 @@ def resultat_algo(tab_dataframes,tab_matrices):
     tab_list_projets = []
     for i in range(0,len(tab_matrices)):
             list_projets = []
-            #print(i)
             progression+=1
-            if (progression/segment)%1==0:
-                progression_bar()
-                fenetre_accueil.update_idletasks()
-            # Arret à 100 pour faire des tests
-            if progression==100:
-                print("Nombre de succes : {}".format(compteur))
-                return succes_indexes,succes_tab_matrices,succes_tab_dataframes
-            fenetre_accueil.update_idletasks()
             m = Munkres()
             temp=tab_matrices_copy[i].copy()
             indexes = m.compute(temp)
-            if (sum([tab_matrices[i][k[0]][k[1]] for k in indexes])==30):
+            if (sum([tab_matrices[i][k[0]][k[1]] for k in indexes])==tab_matrices[0].shape[0]):
                 df_resultat = tab_dataframes_copy[i].sort_index()
                 noms_resultat = df_resultat.index.tolist()
                 index_resultat = []
@@ -652,9 +733,29 @@ def resultat_algo(tab_dataframes,tab_matrices):
                     succes_indexes.append(indexes)
                     succes_tab_matrices.append(tab_matrices_copy[i])
                     succes_tab_dataframes.append(tab_dataframes_copy[i])
-                    compteur+=1 
-    print("Nombre de succes : {}".format(compteur))
-    return succes_indexes,succes_tab_matrices,succes_tab_dataframes
+                    compteur+=1
+            #Mise a jour barre de progression   
+            if (progression%(segment*(pourcentage.get()/100))//1)== 0:
+                progression_bar(0.5)
+                fenetre_accueil.update_idletasks()
+                    
+            if(progression==(segment*pourcentage.get())):
+                progression_algo['value']=100
+                if compteur==0:
+                    messagebox.showinfo("Résultat","Aucune combinaison valide trouvée")
+                if compteur==1:
+                    messagebox.showinfo("Résultat","1 combinaison valide trouvée")
+                    bouton_afficher.configure(state=NORMAL)
+                    bouton_increment_solution.configure(state=NORMAL)
+                    bouton_decrement_solution.configure(state=NORMAL)
+                    bouton_enregistrer.configure(state=NORMAL)
+                else :
+                    messagebox.showinfo("Résultat","{} combinaisons valides trouvées".format(compteur))
+                    bouton_afficher.configure(state=NORMAL)
+                    bouton_increment_solution.configure(state=NORMAL)
+                    bouton_decrement_solution.configure(state=NORMAL)
+                    bouton_enregistrer.configure(state=NORMAL)
+                return succes_indexes,succes_tab_matrices,succes_tab_dataframes
 
 #%%
 
@@ -675,56 +776,98 @@ def solution_precedente():
         numero_solution.set(str(int(numero_solution.get())-1))
         maj_numero_solution(numero_solution.get())
 #%%
-
+def verif_numero_solution():
+    print(numero_solution.get())
+    if numero_solution.get().isdigit()==False:
+        messagebox.showinfo("Attention", "Erreur n° solution")
+        return
+    else:
+        if (((int(numero_solution.get()))==0) or (int(numero_solution.get())>(len(succes_tab_dataframes)))):
+            messagebox.showinfo("Attention", "Erreur n° solution")
+            return
+    affichage_resultat(succes_index[int(numero_solution.get())-1],succes_tab_dataframes[int(numero_solution.get())-1])
+#%%   
 def affichage_resultat(index,dataframe):
-     for i in range(len(index)):
-        print("{} est assigné au projet {}".format(dataframe.index.tolist()[i],dataframe.columns.tolist()[index[i][1]]))
-     
-     df_resultat = dataframe.sort_index()
-     noms_resultat = df_resultat.index.tolist()
-     index_resultat = []
-     
-     for nom1 in noms_resultat : 
-         for j in range(len(dataframe.index.tolist())):
-             if nom1==dataframe.index.tolist()[j]:
-                 index_resultat.append(index[j])
+    df_resultat = dataframe.sort_index()
+    noms_resultat = df_resultat.index.tolist()
+    index_resultat = []
     
-     global fenetre_resultat
-     fenetre_resultat = Tk()
-     fenetre_resultat.title("Résultat")
-     fenetre_resultat.configure(bg="white")
-     fenetre_resultat.columnconfigure(0,weight=1)
-     fenetre_resultat.rowconfigure(0,weight=1)
-     fenetre_resultat.rowconfigure(1, weight=5)
-     
-     tableau_frame = Frame(fenetre_resultat)
-     tableau_frame.grid(column=0, row=1)
-     
-     titre = Label(fenetre_resultat, bg="white", text="Résultat", font=("Courier",25, "italic", "underline"))
-     titre.grid(row=0, column=0)
-     
-     scrollbar = Scrollbar(tableau_frame)
-     scrollbar.pack(side ='right', fill='y')
-     
-     global tableau
-     tableau= Treeview(tableau_frame,yscrollcommand=scrollbar.set )
-     tableau.pack(side ="left", expand=1)
-     scrollbar.config(command=tableau.yview)
-     style = ttk.Style(fenetre_resultat)
-     style.configure("Treeview", font=("Courier", 11, "italic"))
-     style.configure("Treeview.Heading", font=("Courier", 11, "italic"))
-     tableau["columns"] = ("Noms", "N° Projet")
-     tableau.column("Noms", anchor='center')
-     tableau.column("N° Projet", anchor='center')
-     tableau.heading("Noms", text='Noms')
-     tableau.heading("N° Projet", text='N° Projet')
-     tableau['show'] = 'headings'
-     for i in range(len(index)):
-         tableau.insert("",'end', values=(df_resultat.index.tolist()[i],df_resultat.columns.tolist()[index_resultat[i][1]]))
-     tableau.config(height=len(index))
+    for nom1 in noms_resultat : 
+        for j in range(len(dataframe.index.tolist())):
+            if nom1==dataframe.index.tolist()[j]:
+                index_resultat.append(index[j])
+                
+    fenetre_resultat = Tk()
+    fenetre_resultat.title("Résultat")
+    fenetre_resultat.configure(bg="white")
+    fenetre_resultat.columnconfigure(0,weight=1)
+    fenetre_resultat.rowconfigure(0,weight=1)
+    fenetre_resultat.rowconfigure(1, weight=5)
+    
+    tableau_frame = Frame(fenetre_resultat)
+    tableau_frame.grid(column=0, row=1)
+    
+    titre = Label(fenetre_resultat, bg="white", text="Résultat Munkres", font=("Courier",20, "italic", "underline"))
+    titre.grid(row=0, column=0)
+    
+    scrollbar = Scrollbar(tableau_frame)
+    scrollbar.pack(side ='right', fill='y')
+    
+    tableau= Treeview(tableau_frame,yscrollcommand=scrollbar.set )
+    tableau.pack(side ="left", expand=1)
+    scrollbar.config(command=tableau.yview)
+    style = ttk.Style(fenetre_resultat)
+    style.configure("Treeview", font=("Courier", 11, "italic"))
+    style.configure("Treeview.Heading", font=("Courier", 11, "italic"))
+    tableau["columns"] = ("Noms", "N° Projet")
+    tableau.column("Noms", anchor='center')
+    tableau.column("N° Projet", anchor='center')
+    tableau.heading("Noms", text='Noms')
+    tableau.heading("N° Projet", text='N° Projet')
+    tableau['show'] = 'headings'
+    for i in range(len(index)):
+        tableau.insert("",'end', values=(df_resultat.index.tolist()[i],df_resultat.columns.tolist()[index_resultat[i][1]]))
+    tableau.config(height=len(index))
 
-     fenetre_resultat.mainloop()
+    fenetre_resultat.mainloop()
 
+#%%
+def affichage_resultat_gurobi(df_resultat):
+   
+    fenetre_resultat = Tk()
+    fenetre_resultat.title("Résultat")
+    fenetre_resultat.configure(bg="white")
+    fenetre_resultat.columnconfigure(0,weight=1)
+    fenetre_resultat.rowconfigure(0,weight=1)
+    fenetre_resultat.rowconfigure(1, weight=5)
+    
+    tableau_frame = Frame(fenetre_resultat)
+    tableau_frame.grid(column=0, row=1)
+    
+    titre = Label(fenetre_resultat, bg="white", text="Résultat Gurobi", font=("Courier",20, "italic", "underline"))
+    titre.grid(row=0, column=0)
+    
+    scrollbar = Scrollbar(tableau_frame)
+    scrollbar.pack(side ='right', fill='y')
+    
+
+    tableau= Treeview(tableau_frame,yscrollcommand=scrollbar.set )
+    tableau.pack(side ="left", expand=1)
+    scrollbar.config(command=tableau.yview)
+    style = ttk.Style(fenetre_resultat)
+    style.configure("Treeview", font=("Courier", 11, "italic"))
+    style.configure("Treeview.Heading", font=("Courier", 11, "italic"))
+    tableau["columns"] = ("Noms", "N° Projet")
+    tableau.column("Noms", anchor='center')
+    tableau.column("N° Projet", anchor='center')
+    tableau.heading("Noms", text='Noms')
+    tableau.heading("N° Projet", text='N° Projet')
+    tableau['show'] = 'headings'
+    for i in range(df_resultat.shape[0]):
+        tableau.insert("",'end', values=(df_resultat.index.tolist()[i],df_resultat["N° Projet"][i]))
+    tableau.config(height=df_resultat.shape[0])
+
+    fenetre_resultat.mainloop()
 #%%
 def enregistrer_resultat(index,dataframe):
     index_df = []
@@ -743,11 +886,8 @@ def enregistrer_resultat(index,dataframe):
         index_df.append(dataframe.index.tolist()[i])
         col1.append(dataframe.columns.tolist()[index[i][1]])
     df_resultat = pd.DataFrame(data={"N° Projet":col1}, index=index_df)
-    print(df_resultat)
     for j in range(len(col1)):
-        print(j)
         indice = projets.index(col1[j])
-        print(indice)
         if col2_1[indice]=="":
             col2_1[indice]=index_df[j]
         elif col2_2[indice]=="":
@@ -765,37 +905,98 @@ def enregistrer_resultat(index,dataframe):
 
     if zone_nom_excel.get()=="":
         with pd.ExcelWriter("Resultat.xlsx") as writer: 
-            df_resultat.to_excel(writer, sheet_name="test")
-            df_resultat2.to_excel(writer, sheet_name="test1")
+            df_resultat.to_excel(writer, sheet_name="Format 1")
+            df_resultat2.to_excel(writer, sheet_name="Format 2")
             
     
             for column in df_resultat:
-                column_length = max(df_resultat[column].astype(str).map(len).max(), len(column))
                 col_idx = df_resultat.columns.get_loc(column)
-                writer.sheets["test"].set_column(col_idx, col_idx, column_length)
-                
+                writer.sheets["Format 1"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 1"].set_column(0, 0, 20)  
             for column in df_resultat2:
-                column_length = max(df_resultat2[column].astype(str).map(len).max(), len(column))
                 col_idx = df_resultat2.columns.get_loc(column)
-                writer.sheets["test1"].set_column(col_idx, col_idx, column_length)
+                writer.sheets["Format 2"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 2"].set_column(0, 0, 20)
     else : 
         with pd.ExcelWriter(zone_nom_excel.get()+".xlsx") as writer:  
-            df_resultat.to_excel(writer, sheet_name="test")
-            df_resultat2.to_excel(writer, sheet_name="test1")
+            df_resultat.to_excel(writer, sheet_name="Format 1")
+            df_resultat2.to_excel(writer, sheet_name="Format 2")
             
             for column in df_resultat:
-                column_length = max(df_resultat[column].astype(str).map(len).max(), len(column))
                 col_idx = df_resultat.columns.get_loc(column)
-                writer.sheets["test"].set_column(col_idx+1, col_idx+1, 20)
-            writer.sheets["test"].set_column(0, 0, 20)  
+                writer.sheets["Format 1"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 1"].set_column(0, 0, 20)  
             for column in df_resultat2:
-                column_length = max(df_resultat2[column].astype(str).map(len).max(), len(column))
                 col_idx = df_resultat2.columns.get_loc(column)
-                writer.sheets["test1"].set_column(col_idx+1, col_idx+1, 20)
-            writer.sheets["test1"].set_column(0, 0, 20) 
+                writer.sheets["Format 2"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 2"].set_column(0, 0, 20) 
         
-   
-        
+#%%  
+def enregistrer_gurobi(df_resultat):
+    index_df = df_resultat.index.tolist()
+    liste_projets = df_resultat["N° Projet"].tolist()
+    projects = []
+    for i in range(df_resultat.shape[0]):
+        if liste_projets[i] not in projects:
+            projects.append(liste_projets[i])
+    projects.sort()
+    col2_1 = []
+    col2_2 = []
+    col2_3 = []
+    col2_4 = []
+    for k in range(len(projects)):
+        col2_1.append("")
+        col2_2.append("")
+        col2_3.append("")
+        col2_4.append("")
+    
+    for j in range(len(liste_projets)):
+        indice = projects.index(liste_projets[j])
+        if col2_1[indice]=="":
+            col2_1[indice]=index_df[j]
+        elif col2_2[indice]=="":
+            col2_2[indice]=index_df[j]
+        elif col2_3[indice]=="":
+            col2_3[indice]=index_df[j]
+        else :
+            col2_4[indice]=index_df[j]
+
+    df_resultat2 = pd.DataFrame(data={"1er étudiant":col2_1,"2eme étudiant":col2_2,"3eme étudiant":col2_3,"4eme étudiant":col2_4},index=projects)
+
+    if zone_nom_excel.get()=="":
+        with pd.ExcelWriter("Resultat.xlsx") as writer: 
+            df_resultat.to_excel(writer, sheet_name="Format 1")
+            df_resultat2.to_excel(writer, sheet_name="Format 2")
+            
+    
+            for column in df_resultat:
+                col_idx = df_resultat.columns.get_loc(column)
+                writer.sheets["Format 1"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 1"].set_column(0, 0, 20)
+                
+            for column in df_resultat2:
+                col_idx = df_resultat2.columns.get_loc(column)
+                writer.sheets["Format 2"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 2"].set_column(0, 0, 20)
+            
+    else : 
+        with pd.ExcelWriter(zone_nom_excel.get()+".xlsx") as writer:  
+            df_resultat.to_excel(writer, sheet_name="Format 1")
+            df_resultat2.to_excel(writer, sheet_name="Format 2")
+            
+    
+            for column in df_resultat:
+                print(column)
+                col_idx = df_resultat.columns.get_loc(column)
+                writer.sheets["Format 1"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 1"].set_column(0, 0, 20)
+                
+            for column in df_resultat2:
+                print(column)
+                col_idx = df_resultat2.columns.get_loc(column)
+                print(col_idx)
+                writer.sheets["Format 2"].set_column(col_idx+1, col_idx+1, 20)
+            writer.sheets["Format 2"].set_column(0, 0, 20)
 
 #%%
 def test():
@@ -1000,6 +1201,7 @@ def maj_eleves(fenetre_contrainte):
 def label_numero_solution(nb_succes):
     zone_de_texte.delete(0,"end")
     zone_de_texte.insert(0, "1")
+    numero_solution.set("1")
     label_nb_solutions.config(text="/  {}".format(nb_succes))
     
 #%%
@@ -1014,16 +1216,21 @@ def combinaisons_algo():
     if fichier_path.get()=="Aucun fichier chargé":
         messagebox.showinfo("Erreur","Veuillez sélectionner un fichier")
         return
-    df = pd.read_excel(fichier_path.get(),index_col=0)
-    df = simplifier_dataframe(df)
+
 
     #ALGO MUNKRES
     if var_algo.get()==0 :
+        df = pd.read_excel(fichier_path.get(),index_col=0)
+        df = simplifier_dataframe(df)
+        bouton_afficher.configure(state=DISABLED)
+        bouton_increment_solution.configure(state=DISABLED)
+        bouton_decrement_solution.configure(state=DISABLED)
+        bouton_enregistrer.configure(state=DISABLED)
         global projets
         projets = df.columns.tolist()
         
         global solutions
-        solutions = generate_combinations(projets,nb_eleves)
+        solutions = generate_combinations(projets,df.shape[0])
         
         global tab_dataframes
         tab_dataframes = duplication_dataframe(df,solutions)
@@ -1038,7 +1245,7 @@ def combinaisons_algo():
         
         label_numero_solution(len(succes_tab_dataframes))
     
-    #ALGO GUROBY
+    #ALGO GUROBI
     elif var_algo.get()==1 :
         Resultats(fichier_path.get(),int(nb_max_eleves.get()),nb_min_eleves.get(),int(nb_max_projets.get()))
     
@@ -1260,8 +1467,12 @@ def creation_graphique_test_nb_projet(nom_variable,x,y1,y2,xlabel,tab_color,nb_p
 
 #%% MAIN
 
+"""
+fichier_excel ="attribution sujets.xlsx"
+df=pd.read_excel(fichier_excel,index_col=0)
 df = simplifier_dataframe(df)
 eleves = df.index.tolist()
 eleves.insert(0,"")
-eleves_copy = eleves.copy()
+eleves_copy = eleves.copy()"""
+
 fenetre_munkres()
