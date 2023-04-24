@@ -59,3 +59,5 @@ Pour l'installer il faudra :
 # Auteurs
 
 * **LOMBARD Loris** _alias_ [@Skyrise38](https://github.com/Skyrise38)
+* **MOREL Raphaël** _alias_ [@Ralf622](https://github.com/Ralf622)
+* **TRAN Robin** _alias_ [@RobinTran1](https://github.com/RobinTran1)
